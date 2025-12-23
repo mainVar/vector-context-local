@@ -24,6 +24,7 @@
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
+        "@types/uuid": "^10.0.0",
         "@typescript-eslint/eslint-plugin": "^8.31.1",
         "@typescript-eslint/parser": "^8.31.1",
         "assert": "^2.1.0",
@@ -47,5 +48,9 @@
         "url": "https://github.com/zilliztech/claude-context.git"
     },
     "license": "MIT",
-    "author": "Cheney Zhang <277584121@qq.com>"
+    "author": "Cheney Zhang <277584121@qq.com>",
+    "dependencies": {
+        "@qdrant/js-client-rest": "^1.16.2",
+        "uuid": "^13.0.0"
+    }
 }

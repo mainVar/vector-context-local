@@ -1,8 +1,8 @@
-import { OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, OllamaEmbedding } from "@zilliz/claude-context-core";
+import { OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, OllamaEmbedding, LMStudioEmbedding } from "@zilliz/claude-context-core";
 import { ContextMcpConfig } from "./config.js";
 
 // Helper function to create embedding instance based on provider
-export function createEmbeddingInstance(config: ContextMcpConfig): OpenAIEmbedding | VoyageAIEmbedding | GeminiEmbedding | OllamaEmbedding {
+export function createEmbeddingInstance(config: ContextMcpConfig): OpenAIEmbedding | VoyageAIEmbedding | GeminiEmbedding | OllamaEmbedding | LMStudioEmbedding {
     console.log(`[EMBEDDING] Creating ${config.embeddingProvider} embedding instance...`);
 
     switch (config.embeddingProvider) {
@@ -57,13 +57,24 @@ export function createEmbeddingInstance(config: ContextMcpConfig): OpenAIEmbeddi
             console.log(`[EMBEDDING] ✅ Ollama embedding instance created successfully`);
             return ollamaEmbedding;
 
+        case 'LMStudio':
+            const lmStudioBaseUrl = config.lmStudioBaseUrl || 'http://localhost:1234/v1';
+            console.log(`[EMBEDDING] 🔧 Configuring LM Studio with model: ${config.embeddingModel}, baseURL: ${lmStudioBaseUrl}`);
+            const lmStudioEmbedding = new LMStudioEmbedding({
+                apiKey: 'lm-studio', // Dummy key usually works for local LM Studio
+                model: config.embeddingModel,
+                baseURL: lmStudioBaseUrl
+            });
+            console.log(`[EMBEDDING] ✅ LM Studio embedding instance created successfully`);
+            return lmStudioEmbedding;
+
         default:
-            console.error(`[EMBEDDING] ❌ Unsupported embedding provider: ${config.embeddingProvider}`);
-            throw new Error(`Unsupported embedding provider: ${config.embeddingProvider}`);
+            console.error(`[EMBEDDING] ❌ Unsupported embedding provider: ${(config as any).embeddingProvider}`);
+            throw new Error(`Unsupported embedding provider: ${(config as any).embeddingProvider}`);
     }
 }
 
-export function logEmbeddingProviderInfo(config: ContextMcpConfig, embedding: OpenAIEmbedding | VoyageAIEmbedding | GeminiEmbedding | OllamaEmbedding): void {
+export function logEmbeddingProviderInfo(config: ContextMcpConfig, embedding: OpenAIEmbedding | VoyageAIEmbedding | GeminiEmbedding | OllamaEmbedding | LMStudioEmbedding): void {
     console.log(`[EMBEDDING] ✅ Successfully initialized ${config.embeddingProvider} embedding provider`);
     console.log(`[EMBEDDING] Provider details - Model: ${config.embeddingModel}, Dimension: ${embedding.getDimension()}`);
 
@@ -80,6 +91,9 @@ export function logEmbeddingProviderInfo(config: ContextMcpConfig, embedding: Op
             break;
         case 'Ollama':
             console.log(`[EMBEDDING] Ollama configuration - Host: ${config.ollamaHost || 'http://127.0.0.1:11434'}, Model: ${config.embeddingModel}`);
+            break;
+        case 'LMStudio':
+            console.log(`[EMBEDDING] LM Studio configuration - Base URL: ${config.lmStudioBaseUrl || 'http://localhost:1234/v1'}, Model: ${config.embeddingModel}`);
             break;
     }
 } 

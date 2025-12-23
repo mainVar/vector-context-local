@@ -9,9 +9,10 @@ export interface OpenAIEmbeddingConfig {
 
 export class OpenAIEmbedding extends Embedding {
     private client: OpenAI;
-    private config: OpenAIEmbeddingConfig;
+    protected config: OpenAIEmbeddingConfig;
     private dimension: number = 1536; // Default dimension for text-embedding-3-small
     protected maxTokens: number = 8192; // Maximum tokens for OpenAI embedding models
+    private dimensionDetected: boolean = false;
 
     constructor(config: OpenAIEmbeddingConfig) {
         super();
@@ -28,6 +29,7 @@ export class OpenAIEmbedding extends Embedding {
 
         // Use known dimension for standard models
         if (knownModels[model]) {
+            this.dimensionDetected = true;
             return knownModels[model].dimension;
         }
 
@@ -39,6 +41,7 @@ export class OpenAIEmbedding extends Embedding {
                 input: processedText,
                 encoding_format: 'float',
             });
+            this.dimensionDetected = true;
             return response.data[0].embedding.length;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -60,7 +63,7 @@ export class OpenAIEmbedding extends Embedding {
         const knownModels = OpenAIEmbedding.getSupportedModels();
         if (knownModels[model] && this.dimension !== knownModels[model].dimension) {
             this.dimension = knownModels[model].dimension;
-        } else if (!knownModels[model]) {
+        } else if (!knownModels[model] && !this.dimensionDetected) {
             this.dimension = await this.detectDimension();
         }
 
@@ -73,6 +76,7 @@ export class OpenAIEmbedding extends Embedding {
 
             // Update dimension from actual response
             this.dimension = response.data[0].embedding.length;
+            this.dimensionDetected = true;
 
             return {
                 vector: response.data[0].embedding,
@@ -91,7 +95,7 @@ export class OpenAIEmbedding extends Embedding {
         const knownModels = OpenAIEmbedding.getSupportedModels();
         if (knownModels[model] && this.dimension !== knownModels[model].dimension) {
             this.dimension = knownModels[model].dimension;
-        } else if (!knownModels[model]) {
+        } else if (!knownModels[model] && !this.dimensionDetected) {
             this.dimension = await this.detectDimension();
         }
 
@@ -103,6 +107,7 @@ export class OpenAIEmbedding extends Embedding {
             });
 
             this.dimension = response.data[0].embedding.length;
+            this.dimensionDetected = true;
 
             return response.data.map((item) => ({
                 vector: item.embedding,
@@ -126,7 +131,9 @@ export class OpenAIEmbedding extends Embedding {
 
         // For custom models, return the current dimension
         // Note: This may be incorrect until detectDimension() is called
-        console.warn(`[OpenAIEmbedding] ⚠️ getDimension() called for custom model '${model}' - returning ${this.dimension}. Call detectDimension() first for accurate dimension.`);
+        if (!this.dimensionDetected) {
+            console.warn(`[OpenAIEmbedding] ⚠️ getDimension() called for custom model '${model}' - returning ${this.dimension}. Call detectDimension() first for accurate dimension.`);
+        }
         return this.dimension;
     }
 
@@ -140,9 +147,11 @@ export class OpenAIEmbedding extends Embedding {
      */
     async setModel(model: string): Promise<void> {
         this.config.model = model;
+        this.dimensionDetected = false; // Reset checking flag
         const knownModels = OpenAIEmbedding.getSupportedModels();
         if (knownModels[model]) {
             this.dimension = knownModels[model].dimension;
+            this.dimensionDetected = true;
         } else {
             this.dimension = await this.detectDimension();
         }

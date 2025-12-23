@@ -23,4 +23,6 @@ export {
     CreateFreeClusterResponse,
     CreateFreeClusterWithDetailsResponse,
     DescribeClusterResponse
-} from './zilliz-utils'; 
+} from './zilliz-utils';
+
+export { QdrantVectorDB } from './qdrant-vectordb'; 

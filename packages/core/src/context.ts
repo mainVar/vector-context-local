@@ -117,7 +117,9 @@ export class Context {
         }
         this.vectorDatabase = config.vectorDatabase;
 
-        this.codeSplitter = config.codeSplitter || new AstCodeSplitter(2500, 300);
+        const chunkSize = parseInt(envManager.get('CHUNK_SIZE') || '800', 10);
+        const chunkOverlap = parseInt(envManager.get('CHUNK_OVERLAP') || '100', 10);
+        this.codeSplitter = config.codeSplitter || new AstCodeSplitter(chunkSize, chunkOverlap);
 
         // Load custom extensions from environment variables
         const envCustomExtensions = this.getCustomExtensionsFromEnv();
@@ -223,7 +225,7 @@ export class Context {
     private getIsHybrid(): boolean {
         const isHybridEnv = envManager.get('HYBRID_MODE');
         if (isHybridEnv === undefined || isHybridEnv === null) {
-            return true; // Default to true
+            return false; // Default to false for stability
         }
         return isHybridEnv.toLowerCase() === 'true';
     }
@@ -233,7 +235,7 @@ export class Context {
      */
     public getCollectionName(codebasePath: string): string {
         const isHybrid = this.getIsHybrid();
-        const normalizedPath = path.resolve(codebasePath);
+        const normalizedPath = path.resolve(codebasePath).toLowerCase();
         const hash = crypto.createHash('md5').update(normalizedPath).digest('hex');
         const prefix = isHybrid === true ? 'hybrid_code_chunks' : 'code_chunks';
         return `${prefix}_${hash.substring(0, 8)}`;
@@ -262,6 +264,8 @@ export class Context {
         progressCallback?.({ phase: 'Preparing collection...', current: 0, total: 100, percentage: 0 });
         console.log(`Debug2: Preparing vector collection for codebase${forceReindex ? ' (FORCE REINDEX)' : ''}`);
         await this.prepareCollection(codebasePath, forceReindex);
+        const collectionName = this.getCollectionName(codebasePath);
+        console.log(`[Context] 🎯 Using collection name: ${collectionName}`);
 
         // 3. Recursively traverse codebase to get all supported files
         progressCallback?.({ phase: 'Scanning files...', current: 5, total: 100, percentage: 5 });
@@ -874,7 +878,10 @@ export class Context {
             });
 
             // Store to vector database
+            console.log(`[Context] 📝 About to insert ${documents.length} documents into collection: ${this.getCollectionName(codebasePath)}`);
+            console.log(`[Context] 📝 First document ID: ${documents[0]?.id}, vector length: ${documents[0]?.vector?.length}`);
             await this.vectorDatabase.insert(this.getCollectionName(codebasePath), documents);
+            console.log(`[Context] ✅ Successfully inserted ${documents.length} documents`);
         }
     }
 
@@ -910,16 +917,28 @@ export class Context {
 
     /**
      * Generate unique ID based on chunk content and location
+     * Uses UUID v5 (deterministic) to ensure same chunk always gets same ID
      * @param relativePath Relative path to the file
      * @param startLine Start line number
      * @param endLine End line number
      * @param content Chunk content
-     * @returns Hash-based unique ID
+     * @returns Valid UUID string
      */
     private generateId(relativePath: string, startLine: number, endLine: number, content: string): string {
         const combinedString = `${relativePath}:${startLine}:${endLine}:${content}`;
         const hash = crypto.createHash('sha256').update(combinedString, 'utf-8').digest('hex');
-        return `chunk_${hash.substring(0, 16)}`;
+
+        // Convert hash to UUID v4 format (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx)
+        // Take first 32 hex chars and format as UUID
+        const uuid = [
+            hash.substring(0, 8),
+            hash.substring(8, 12),
+            '4' + hash.substring(13, 16), // Version 4
+            ((parseInt(hash.substring(16, 17), 16) & 0x3) | 0x8).toString(16) + hash.substring(17, 20), // Variant bits
+            hash.substring(20, 32)
+        ].join('-');
+
+        return uuid;
     }
 
     /**

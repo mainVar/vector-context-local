@@ -58,6 +58,9 @@ export class ToolHandlers {
 
             const cloudCodebases = new Set<string>();
 
+            // Helper to normalize path for comparison (handles Windows case insensitivity)
+            const normalizeForComparison = (p: string) => path.normalize(p).toLowerCase();
+
             // Check each collection for codebase path
             for (const collectionName of collections) {
                 try {
@@ -79,24 +82,27 @@ export class ToolHandlers {
 
                     if (results && results.length > 0) {
                         const firstResult = results[0];
-                        const metadataStr = firstResult.metadata;
 
-                        if (metadataStr) {
+                        // Try to get codebasePath directly (Qdrant style where metadata is spread)
+                        let codebasePath = firstResult.codebasePath;
+
+                        // Fallback: Check inside metadata field (Legacy/Milvus style)
+                        if (!codebasePath && firstResult.metadata) {
                             try {
-                                const metadata = JSON.parse(metadataStr);
-                                const codebasePath = metadata.codebasePath;
-
-                                if (codebasePath && typeof codebasePath === 'string') {
-                                    console.log(`[SYNC-CLOUD] 📍 Found codebase path: ${codebasePath} in collection: ${collectionName}`);
-                                    cloudCodebases.add(codebasePath);
-                                } else {
-                                    console.warn(`[SYNC-CLOUD] ⚠️  No codebasePath found in metadata for collection: ${collectionName}`);
-                                }
+                                const metadata = typeof firstResult.metadata === 'string'
+                                    ? JSON.parse(firstResult.metadata)
+                                    : firstResult.metadata;
+                                codebasePath = metadata.codebasePath;
                             } catch (parseError) {
                                 console.warn(`[SYNC-CLOUD] ⚠️  Failed to parse metadata JSON for collection ${collectionName}:`, parseError);
                             }
+                        }
+
+                        if (codebasePath && typeof codebasePath === 'string') {
+                            console.log(`[SYNC-CLOUD] 📍 Found codebase path: ${codebasePath} in collection: ${collectionName}`);
+                            cloudCodebases.add(normalizeForComparison(codebasePath));
                         } else {
-                            console.warn(`[SYNC-CLOUD] ⚠️  No metadata found in collection: ${collectionName}`);
+                            console.warn(`[SYNC-CLOUD] ⚠️  No codebasePath found in metadata for collection: ${collectionName}`);
                         }
                     } else {
                         console.log(`[SYNC-CLOUD] ℹ️  Collection ${collectionName} is empty`);
@@ -117,7 +123,7 @@ export class ToolHandlers {
 
             // Remove local codebases that don't exist in cloud
             for (const localCodebase of localCodebases) {
-                if (!cloudCodebases.has(localCodebase)) {
+                if (!cloudCodebases.has(normalizeForComparison(localCodebase))) {
                     this.snapshotManager.removeIndexedCodebase(localCodebase);
                     hasChanges = true;
                     console.log(`[SYNC-CLOUD] ➖ Removed local codebase (not in cloud): ${localCodebase}`);

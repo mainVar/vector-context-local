@@ -34,7 +34,7 @@ Model Context Protocol (MCP) allows you to integrate Claude Context with your fa
 <details>
 <summary>Get a free vector database on Zilliz Cloud 👈</summary>
 
-Claude Context needs a vector database. You can [sign up](https://cloud.zilliz.com/signup?utm_source=github&utm_medium=referral&utm_campaign=2507-codecontext-readme) on Zilliz Cloud to get an API key.
+Claude Context needs a vector database. You can [sign up](https://cloud.zilliz.com/signup?utm_source=github&utm_medium=referral&utm_campaign=2507-codecontext-readme) on Zilliz Cloud to get an API key, or use a local Qdrant instance.
 
 ![](assets/signup_and_get_apikey.png)
 
@@ -49,6 +49,35 @@ You need an OpenAI API key for the embedding model. You can get one by signing u
 Your API key will look like this: it always starts with `sk-`.  
 Copy your key and use it in the configuration examples below as `your-openai-api-key`.
 
+</details>
+
+<details>
+<summary>Local Setup with LM Studio and Qdrant (Docker)</summary>
+
+You can run Qdrant and LM Studio locally for a private setup. This version includes stability fixes for Windows and deterministic ID generation for reliable re-indexing.
+
+**1. Run Qdrant with Docker:**
+```bash
+docker run -p 6333:6333 -p 6334:6334 \
+    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
+    qdrant/qdrant
+```
+
+**2. Run LM Studio:**
+- Download and install [LM Studio](https://lmstudio.ai/).
+- Load an embedding model (e.g., `nomic-embed-text`).
+- Start the Local Inference Server (default port 1234).
+
+**3. Configure MCP (example):**
+```bash
+claude mcp add claude-context \
+  -e EMBEDDING_PROVIDER=LMStudio \
+  -e EMBEDDING_MODEL=nomic-embed-text \
+  -e LMSTUDIO_BASE_URL=http://localhost:1234/v1 \
+  -e VECTOR_STORE_PROVIDER=Qdrant \
+  -e QDRANT_ADDRESS=http://localhost:6333 \
+  -- npx @zilliz/claude-context-mcp@latest
+```
 </details>
 
 ### Configure MCP for Claude Code
@@ -528,6 +557,8 @@ For detailed evaluation methodology and results, see the [evaluation directory](
 
 - 🔍 **Hybrid Code Search**: Ask questions like *"find functions that handle user authentication"* and get relevant, context-rich code instantly using advanced hybrid search (BM25 + dense vector).
 - 🧠 **Context-Aware**: Discover large codebase, understand how different parts of your codebase relate, even across millions of lines of code.
+- ⚡ **Deterministic Indexing**: Uses content-based ID generation (UUID v4 compatible) to ensure idempotent indexing. Re-indexing the same file content results in an update rather than a duplicate.
+- 🪟 **Cross-Platform Stability**: Fully optimized for Windows, including drive letter case normalization and path escaping for local vector stores.
 - ⚡ **Incremental Indexing**: Efficiently re-index only changed files using Merkle trees.
 - 🧩 **Intelligent Code Chunking**: Analyze code in Abstract Syntax Trees (AST) for chunking.
 - 🗄️ **Scalable**: Integrates with Zilliz Cloud for scalable vector search, no matter how large your codebase is.
@@ -543,8 +574,8 @@ Claude Context is a monorepo containing three main packages:
 
 ### Supported Technologies
 
-- **Embedding Providers**: [OpenAI](https://openai.com), [VoyageAI](https://voyageai.com), [Ollama](https://ollama.ai), [Gemini](https://gemini.google.com)
-- **Vector Databases**: [Milvus](https://milvus.io) or [Zilliz Cloud](https://zilliz.com/cloud)(fully managed vector database as a service)
+- **Embedding Providers**: [OpenAI](https://openai.com), [VoyageAI](https://voyageai.com), [Ollama](https://ollama.ai), [Gemini](https://gemini.google.com), [LM Studio](https://lmstudio.ai)
+- **Vector Databases**: [Milvus](https://milvus.io) or [Zilliz Cloud](https://zilliz.com/cloud), [Qdrant](https://qdrant.tech)
 - **Code Splitters**: AST-based splitter (with automatic fallback), LangChain character-based splitter
 - **Languages**: TypeScript, JavaScript, Python, Java, C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, Scala, Markdown
 - **Development Tools**: VSCode, Model Context Protocol

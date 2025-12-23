@@ -99,6 +99,8 @@ results.forEach(result => {
 - **Flexible Architecture**: Pluggable embedding providers and vector databases
 - **Smart Chunking**: Intelligent code splitting that preserves context and structure
 - **Batch Processing**: Efficient processing of large codebases with progress tracking
+- **Deterministic ID Generation**: Content-based UUID v4 generation ensures idempotent indexing (avoids duplicates)
+- **Windows Optimized**: Built-in support for Windows path normalization (lowercased drive letters) and escaping
 - **Pattern Matching**: Built-in ignore patterns for common build artifacts and dependencies
 - **Incremental File Synchronization**: Efficient change detection using Merkle trees to only re-index modified files
 
@@ -108,10 +110,12 @@ results.forEach(result => {
 - **VoyageAI Embeddings** - High-quality embeddings optimized for code (`voyage-code-3`, `voyage-3.5`, etc.)
 - **Gemini Embeddings** - Google's embedding models (`gemini-embedding-001`)
 - **Ollama Embeddings** - Local embedding models via Ollama
+- **LM Studio Embeddings** - Local embedding models via LM Studio
 
 ## Vector Database Support
 
 - **Milvus/Zilliz Cloud** - High-performance vector database
+- **Qdrant** - Vector Database for the next generation of AI applications
 
 ## Code Splitters
 
@@ -209,6 +213,26 @@ const vectorDatabase = new MilvusVectorDatabase({
 const context = new Context({
   embedding,
   vectorDatabase
+});
+```
+
+### Using LM Studio and Qdrant (Local Setup)
+
+```typescript
+import { Context, QdrantVectorDB, LMStudioEmbedding } from '@zilliz/claude-context-core';
+
+// Initialize with LM Studio
+const lmStudioEmbedding = new LMStudioEmbedding({
+  baseURL: 'http://localhost:1234/v1',
+  model: 'nomic-embed-text'
+});
+
+// Initialize Qdrant
+const qdrantVectorDB = new QdrantVectorDB('http://localhost:6333');
+
+const localContext = new Context({
+  embedding: lmStudioEmbedding,
+  vectorDatabase: qdrantVectorDB
 });
 ```
 
