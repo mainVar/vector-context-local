@@ -25,45 +25,26 @@ QDRANT_ADDRESS=http://localhost:6333
 # (Automatic fixes for drive letter casing and path escaping are built-in)
 ```
 
-### Configuration Examples
+### Configuration Example
 
-#### Claude Desktop
-Add to your Claude Desktop configuration (`%APPDATA%\Claude\claude_desktop_config.json`):
+Add the following to your MCP client configuration (e.g., `claude_desktop_config.json`, Cursor, or Gemini settings):
 
 ```json
 {
   "mcpServers": {
-    "vector-context": {
-      "command": "npx",
-      "args": ["-y", "@zilliz/claude-context-mcp@latest"],
+    "claude-context": {
+      "command": "node",
+      "args": [
+        "d:/Projects/vector-context-local/packages/mcp/dist/index.js"
+      ],
       "env": {
         "EMBEDDING_PROVIDER": "LMStudio",
         "EMBEDDING_MODEL": "nomic-embed-text",
         "LMSTUDIO_BASE_URL": "http://localhost:1234/v1",
         "VECTOR_STORE_PROVIDER": "Qdrant",
         "QDRANT_ADDRESS": "http://localhost:6333"
-      }
-    }
-  }
-}
-```
-
-#### Cursor
-Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
-
-```json
-{
-  "mcpServers": {
-    "vector-context": {
-      "command": "npx",
-      "args": ["-y", "@zilliz/claude-context-mcp@latest"],
-      "env": {
-        "EMBEDDING_PROVIDER": "LMStudio",
-        "EMBEDDING_MODEL": "nomic-embed-text",
-        "LMSTUDIO_BASE_URL": "http://localhost:1234/v1",
-        "VECTOR_STORE_PROVIDER": "Qdrant",
-        "QDRANT_ADDRESS": "http://localhost:6333"
-      }
+      },
+      "disabled": false
     }
   }
 }

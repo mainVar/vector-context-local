@@ -37,18 +37,29 @@ This version introduces several key improvements for local-first developer exper
     - Load an embedding model (e.g., `nomic-embed-text`).
     - Start the Local Inference Server (default port 1234).
 
-### Configure MCP for Claude Code
+### MCP Server Configuration
 
-Add the server to your Claude configuration:
+Add the following to your MCP client configuration (e.g., Cursor, Claude Desktop, or Gemini):
 
-```bash
-claude mcp add claude-context \
-  -e EMBEDDING_PROVIDER=LMStudio \
-  -e EMBEDDING_MODEL=nomic-embed-text \
-  -e LMSTUDIO_BASE_URL=http://localhost:1234/v1 \
-  -e VECTOR_STORE_PROVIDER=Qdrant \
-  -e QDRANT_ADDRESS=http://localhost:6333 \
-  -- npx @zilliz/claude-context-mcp@latest
+```json
+{
+  "mcpServers": {
+    "claude-context": {
+      "command": "node",
+      "args": [
+        "d:/Projects/vector-context-local/packages/mcp/dist/index.js"
+      ],
+      "env": {
+        "EMBEDDING_PROVIDER": "LMStudio",
+        "EMBEDDING_MODEL": "nomic-embed-text",
+        "LMSTUDIO_BASE_URL": "http://localhost:1234/v1",
+        "VECTOR_STORE_PROVIDER": "Qdrant",
+        "QDRANT_ADDRESS": "http://localhost:6333"
+      },
+      "disabled": false
+    }
+  }
+}
 ```
 
 ---
