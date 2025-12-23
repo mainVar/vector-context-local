@@ -1,12 +1,8 @@
 # @zilliz/claude-context-core
-![](../../assets/claude-context.png)
 
-The core indexing engine for Claude Context - a powerful tool for semantic search and analysis of codebases using vector embeddings and AI.
+The core indexing engine for Vector Context (Local) - a powerful tool for semantic search and analysis of codebases using vector embeddings and AI, optimized for local execution and Windows stability.
 
-[![npm version](https://img.shields.io/npm/v/@zilliz/claude-context-core.svg)](https://www.npmjs.com/package/@zilliz/claude-context-core)
-[![npm downloads](https://img.shields.io/npm/dm/@zilliz/claude-context-core.svg)](https://www.npmjs.com/package/@zilliz/claude-context-core)
-
-> 📖 **New to Claude Context?** Check out the [main project README](../../README.md) for an overview and quick start guide.
+> 📖 **New to the project?** Check out the [main project README](../../README.md) for an overview and local quick start guide.
 
 ## Installation
 
@@ -14,71 +10,36 @@ The core indexing engine for Claude Context - a powerful tool for semantic searc
 npm install @zilliz/claude-context-core
 ```
 
-### Prepare Environment Variables
-#### OpenAI API key
-See [OpenAI Documentation](https://platform.openai.com/docs/api-reference) for more details to get your API key.
-```bash
-OPENAI_API_KEY=your-openai-api-key
-```
+## Quick Start (Local Setup)
 
-#### Zilliz Cloud configuration
-Get a free Milvus vector database on Zilliz Cloud. 
-
-Claude Context needs a vector database. You can [sign up](https://cloud.zilliz.com/signup?utm_source=github&utm_medium=referral&utm_campaign=2507-codecontext-readme) on Zilliz Cloud to get a free Serverless cluster.
-
-![](../../assets/signup_and_create_cluster.jpeg)
-
-After creating your cluster, open your Zilliz Cloud console and copy both the **public endpoint** and your **API key**.  
-These will be used as `your-zilliz-cloud-public-endpoint` and `your-zilliz-cloud-api-key` in the configuration examples.
-
-![Zilliz Cloud Dashboard](../../assets/zilliz_cloud_dashboard.jpeg)
-
-Keep both values handy for the configuration steps below.
-
-If you need help creating your free vector database or finding these values, see the [Zilliz Cloud documentation](https://docs.zilliz.com/docs/create-cluster) for detailed instructions.
-
-```bash
-MILVUS_ADDRESS=your-zilliz-cloud-public-endpoint
-MILVUS_TOKEN=your-zilliz-cloud-api-key
-``` 
-
-> 💡 **Tip**: For easier configuration management across different usage scenarios, consider using [global environment variables](../../docs/getting-started/environment-variables.md).
-
-## Quick Start
+This package supports strictly local workflows using **LM Studio** for embeddings and **Qdrant** for vector storage.
 
 ```typescript
-import { 
-  Context, 
-  OpenAIEmbedding, 
-  MilvusVectorDatabase 
-} from '@zilliz/claude-context-core';
+import { Context, QdrantVectorDB, LMStudioEmbedding } from '@zilliz/claude-context-core';
 
-// Initialize embedding provider
-const embedding = new OpenAIEmbedding({
-  apiKey: process.env.OPENAI_API_KEY || 'your-openai-api-key',
-  model: 'text-embedding-3-small'
+// 1. Initialize with LM Studio (local embeddings)
+const lmStudioEmbedding = new LMStudioEmbedding({
+  baseURL: 'http://localhost:1234/v1',
+  model: 'nomic-embed-text' // or your preferred model
 });
 
-// Initialize vector database
-const vectorDatabase = new MilvusVectorDatabase({
-  address: process.env.MILVUS_ADDRESS || 'localhost:19530',
-  token: process.env.MILVUS_TOKEN || ''
-});
+// 2. Initialize Qdrant (local vector store)
+const qdrantVectorDB = new QdrantVectorDB('http://localhost:6333');
 
-// Create context instance
+// 3. Create context instance
 const context = new Context({
-  embedding,
-  vectorDatabase
+  embedding: lmStudioEmbedding,
+  vectorDatabase: qdrantVectorDB
 });
 
-// Index a codebase
+// 4. Index a codebase
 const stats = await context.indexCodebase('./my-project', (progress) => {
   console.log(`${progress.phase} - ${progress.percentage}%`);
 });
 
 console.log(`Indexed ${stats.indexedFiles} files with ${stats.totalChunks} chunks`);
 
-// Search the codebase
+// 5. Search the codebase
 const results = await context.semanticSearch(
   './my-project',
   'function that handles user authentication',
@@ -86,79 +47,24 @@ const results = await context.semanticSearch(
 );
 
 results.forEach(result => {
-  console.log(`${result.relativePath}:${result.startLine}-${result.endLine}`);
-  console.log(`Score: ${result.score}`);
-  console.log(result.content);
+  console.log(`${result.relativePath}:${result.startLine}-${result.endLine} (Score: ${result.score})`);
 });
 ```
 
 ## Features
 
-- **Multi-language Support**: Index TypeScript, JavaScript, Python, Java, C++, and many other programming languages
-- **Semantic Search**: Find code using natural language queries powered by AI embeddings
-- **Flexible Architecture**: Pluggable embedding providers and vector databases
-- **Smart Chunking**: Intelligent code splitting that preserves context and structure
-- **Batch Processing**: Efficient processing of large codebases with progress tracking
-- **Deterministic ID Generation**: Content-based UUID v4 generation ensures idempotent indexing (avoids duplicates)
-- **Windows Optimized**: Built-in support for Windows path normalization (lowercased drive letters) and escaping
-- **Pattern Matching**: Built-in ignore patterns for common build artifacts and dependencies
-- **Incremental File Synchronization**: Efficient change detection using Merkle trees to only re-index modified files
+- **Multi-language Support**: Index TypeScript, JavaScript, Python, Java, C++, and many other languages.
+- **Semantic Search**: Find code using natural language queries powered by AI embeddings.
+- **Deterministic ID Generation**: Content-based UUID v4 generation ensures idempotent indexing (avoids duplicates).
+- **Windows Optimized**: Built-in support for Windows path normalization (lowercased drive letters) and path escaping.
+- **Incremental File Synchronization**: Efficient change detection using Merkle trees to only re-index modified files.
+- **Smart Chunking**: Intelligent code splitting using Abstract Syntax Trees (AST).
 
-## Embedding Providers
+## Supported Technologies
 
-- **OpenAI Embeddings** (`text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`)
-- **VoyageAI Embeddings** - High-quality embeddings optimized for code (`voyage-code-3`, `voyage-3.5`, etc.)
-- **Gemini Embeddings** - Google's embedding models (`gemini-embedding-001`)
-- **Ollama Embeddings** - Local embedding models via Ollama
-- **LM Studio Embeddings** - Local embedding models via LM Studio
-
-## Vector Database Support
-
-- **Milvus/Zilliz Cloud** - High-performance vector database
-- **Qdrant** - Vector Database for the next generation of AI applications
-
-## Code Splitters
-
-- **AST Code Splitter** - AST-based code splitting with automatic fallback (default)
-- **LangChain Code Splitter** - Character-based code chunking
-
-## Configuration
-
-### ContextConfig
-
-```typescript
-interface ContextConfig {
-  embedding?: Embedding;           // Embedding provider
-  vectorDatabase?: VectorDatabase; // Vector database instance (required)
-  codeSplitter?: Splitter;        // Code splitting strategy
-  supportedExtensions?: string[]; // File extensions to index
-  ignorePatterns?: string[];      // Patterns to ignore
-  customExtensions?: string[];    // Custom extensions from MCP
-  customIgnorePatterns?: string[]; // Custom ignore patterns from MCP
-}
-```
-
-### Supported File Extensions (Default)
-
-```typescript
-[
-  // Programming languages
-  '.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.cpp', '.c', '.h', '.hpp',
-  '.cs', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.scala', '.m', '.mm',
-  // Text and markup files  
-  '.md', '.markdown', '.ipynb'
-]
-```
-
-### Default Ignore Patterns
-
-- Build and dependency directories: `node_modules/**`, `dist/**`, `build/**`, `out/**`, `target/**`
-- Version control: `.git/**`, `.svn/**`, `.hg/**`
-- IDE files: `.vscode/**`, `.idea/**`, `*.swp`, `*.swo`
-- Cache directories: `.cache/**`, `__pycache__/**`, `.pytest_cache/**`, `coverage/**`
-- Minified files: `*.min.js`, `*.min.css`, `*.bundle.js`, `*.map`
-- Log and temp files: `logs/**`, `tmp/**`, `temp/**`, `*.log`
-- Environment files: `.env`, `.env.*`, `*.local`
+- **Embedding Providers**: [LM Studio](https://lmstudio.ai), [Ollama](https://ollama.ai), [OpenAI](https://openai.com), [VoyageAI](https://voyageai.com), [Gemini](https://gemini.google.com)
+- **Vector Databases**: [Qdrant](https://qdrant.tech), [Milvus/Zilliz Cloud](https://milvus.io)
+- **Code Splitters**: AST-based code splitting (default), LangChain character-based splitter.
 
 ## API Reference
 
@@ -166,17 +72,17 @@ interface ContextConfig {
 
 #### Methods
 
-- `indexCodebase(path, progressCallback?, forceReindex?)` - Index an entire codebase
-- `reindexByChange(path, progressCallback?)` - Incrementally re-index only changed files
-- `semanticSearch(path, query, topK?, threshold?, filterExpr?)` - Search indexed code semantically
-- `hasIndex(path)` - Check if codebase is already indexed
-- `clearIndex(path, progressCallback?)` - Remove index for a codebase
-- `updateIgnorePatterns(patterns)` - Update ignore patterns
-- `addCustomIgnorePatterns(patterns)` - Add custom ignore patterns
-- `addCustomExtensions(extensions)` - Add custom file extensions
-- `updateEmbedding(embedding)` - Switch embedding provider
-- `updateVectorDatabase(vectorDB)` - Switch vector database
-- `updateSplitter(splitter)` - Switch code splitter
+- `indexCodebase(path, progressCallback?, forceReindex?)` - Index an entire codebase.
+- `reindexByChange(path, progressCallback?)` - Incrementally re-index only changed files.
+- `semanticSearch(path, query, topK?, threshold?, filterExpr?)` - Search indexed code semantically.
+- `hasIndex(path)` - Check if codebase is already indexed.
+- `clearIndex(path, progressCallback?)` - Remove index for a codebase.
+- `updateIgnorePatterns(patterns)` - Update ignore patterns.
+- `addCustomIgnorePatterns(patterns)` - Add custom ignore patterns.
+- `addCustomExtensions(extensions)` - Add custom file extensions.
+- `updateEmbedding(embedding)` - Switch embedding provider.
+- `updateVectorDatabase(vectorDB)` - Switch vector database.
+- `updateSplitter(splitter)` - Switch code splitter.
 
 ### Search Results
 
@@ -191,119 +97,20 @@ interface SemanticSearchResult {
 }
 ```
 
-
-## Examples
-
-### Using VoyageAI Embeddings
-
-```typescript
-import { Context, MilvusVectorDatabase, VoyageAIEmbedding } from '@zilliz/claude-context-core';
-
-// Initialize with VoyageAI embedding provider
-const embedding = new VoyageAIEmbedding({
-  apiKey: process.env.VOYAGEAI_API_KEY || 'your-voyageai-api-key',
-  model: 'voyage-code-3'
-});
-
-const vectorDatabase = new MilvusVectorDatabase({
-  address: process.env.MILVUS_ADDRESS || 'localhost:19530',
-  token: process.env.MILVUS_TOKEN || ''
-});
-
-const context = new Context({
-  embedding,
-  vectorDatabase
-});
-```
-
-### Using LM Studio and Qdrant (Local Setup)
-
-```typescript
-import { Context, QdrantVectorDB, LMStudioEmbedding } from '@zilliz/claude-context-core';
-
-// Initialize with LM Studio
-const lmStudioEmbedding = new LMStudioEmbedding({
-  baseURL: 'http://localhost:1234/v1',
-  model: 'nomic-embed-text'
-});
-
-// Initialize Qdrant
-const qdrantVectorDB = new QdrantVectorDB('http://localhost:6333');
-
-const localContext = new Context({
-  embedding: lmStudioEmbedding,
-  vectorDatabase: qdrantVectorDB
-});
-```
-
-### Custom File Filtering
-
-```typescript
-const context = new Context({
-  embedding,
-  vectorDatabase,
-  supportedExtensions: ['.ts', '.js', '.py', '.java'],
-  ignorePatterns: [
-    'node_modules/**',
-    'dist/**',
-    '*.spec.ts',
-    '*.test.js'
-  ]
-});
-```
-
 ## File Synchronization Architecture
 
-Claude Context implements an intelligent file synchronization system that efficiently tracks and processes only the files that have changed since the last indexing operation. This dramatically improves performance when working with large codebases.
+Vector Context implements an intelligent file synchronization system that efficiently tracks and processes only the files that have changed since the last indexing operation.
 
-![File Synchronization Architecture](../../assets/file_synchronizer.png)
-
-### How It Works
-
-The file synchronization system uses a **Merkle tree-based approach** combined with SHA-256 file hashing to detect changes:
-
-#### 1. File Hashing
-- Each file in the codebase is hashed using SHA-256
-- File hashes are computed based on file content, not metadata
-- Hashes are stored with relative file paths for consistency across different environments
-
-#### 2. Merkle Tree Construction
-- All file hashes are organized into a Merkle tree structure
-- The tree provides a single root hash that represents the entire codebase state
-- Any change to any file will cause the root hash to change
-
-#### 3. Snapshot Management
-- File synchronization state is persisted to `~/.context/merkle/` directory
-- Each codebase gets a unique snapshot file based on its absolute path hash
-- Snapshots contain both file hashes and serialized Merkle tree data
-
-#### 4. Change Detection Process
-1. **Quick Check**: Compare current Merkle root hash with stored snapshot
-2. **Detailed Analysis**: If root hashes differ, perform file-by-file comparison
-3. **Change Classification**: Categorize changes into three types:
-   - **Added**: New files that didn't exist before
-   - **Modified**: Existing files with changed content
-   - **Removed**: Files that were deleted from the codebase
-
-#### 5. Incremental Updates
-- Only process files that have actually changed
-- Update vector database entries only for modified chunks
-- Remove entries for deleted files
-- Add entries for new files
-
+1. **File Hashing**: Each file is hashed using SHA-256 based on content.
+2. **Merkle Trees**: All file hashes are organized into a Merkle tree structure for fast global change detection.
+3. **Snapshot Management**: State is persisted to `~/.context/merkle/` for cross-session consistency.
+4. **Change Classification**: Detects Added, Modified, and Removed files automatically.
+5. **Incremental Updates**: Only processes changes, minimizing vector database operations.
 
 ## Contributing
 
-This package is part of the Claude Context monorepo. Please see:
-- [Main Contributing Guide](../../CONTRIBUTING.md) - General contribution guidelines
-- [Core Package Contributing](CONTRIBUTING.md) - Specific development guide for this package
-
-## Related Packages
-
-- **[@claude-context/mcp](../mcp)** - MCP server that uses this core engine
-- **[VSCode Extension](../vscode-extension)** - VSCode extension built on this core
-
+This package is part of the Vector Context monorepo. Please see the [Main Contributing Guide](../../CONTRIBUTING.md) for general guidelines.
 
 ## License
 
-MIT - See [LICENSE](../../LICENSE) for details
+MIT - See [LICENSE](../../LICENSE) for details.
