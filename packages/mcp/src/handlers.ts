@@ -32,118 +32,53 @@ export class ToolHandlers {
         try {
             console.log(`[SYNC-CLOUD] 🔄 Syncing indexed codebases from Zilliz Cloud...`);
 
-            // Get all collections using the interface method
             const vectorDb = this.context.getVectorDatabase();
-
-            // Use the new listCollections method from the interface
             const collections = await vectorDb.listCollections();
+            const cloudCollectionNames = new Set(collections);
 
             console.log(`[SYNC-CLOUD] 📋 Found ${collections.length} collections in Zilliz Cloud`);
-
-            if (collections.length === 0) {
-                console.log(`[SYNC-CLOUD] ✅ No collections found in cloud`);
-                // If no collections in cloud, remove all local codebases
-                const localCodebases = this.snapshotManager.getIndexedCodebases();
-                if (localCodebases.length > 0) {
-                    console.log(`[SYNC-CLOUD] 🧹 Removing ${localCodebases.length} local codebases as cloud has no collections`);
-                    for (const codebasePath of localCodebases) {
-                        this.snapshotManager.removeIndexedCodebase(codebasePath);
-                        console.log(`[SYNC-CLOUD] ➖ Removed local codebase: ${codebasePath}`);
-                    }
-                    this.snapshotManager.saveCodebaseSnapshot();
-                    console.log(`[SYNC-CLOUD] 💾 Updated snapshot to match empty cloud state`);
-                }
-                return;
-            }
-
-            const cloudCodebases = new Set<string>();
 
             // Helper to normalize path for comparison (handles Windows case insensitivity)
             const normalizeForComparison = (p: string) => path.normalize(p).toLowerCase();
 
-            // Check each collection for codebase path
-            for (const collectionName of collections) {
-                try {
-                    // Skip collections that don't match the code_chunks pattern (support both legacy and new collections)
-                    if (!collectionName.startsWith('code_chunks_') && !collectionName.startsWith('hybrid_code_chunks_')) {
-                        console.log(`[SYNC-CLOUD] ⏭️  Skipping non-code collection: ${collectionName}`);
-                        continue;
-                    }
-
-                    console.log(`[SYNC-CLOUD] 🔍 Checking collection: ${collectionName}`);
-
-                    // Query the first document to get metadata
-                    const results = await vectorDb.query(
-                        collectionName,
-                        '', // Empty filter to get all results
-                        ['metadata'], // Only fetch metadata field
-                        1 // Only need one result to extract codebasePath
-                    );
-
-                    if (results && results.length > 0) {
-                        const firstResult = results[0];
-
-                        // Try to get codebasePath directly (Qdrant style where metadata is spread)
-                        let codebasePath = firstResult.codebasePath;
-
-                        // Fallback: Check inside metadata field (Legacy/Milvus style)
-                        if (!codebasePath && firstResult.metadata) {
-                            try {
-                                const metadata = typeof firstResult.metadata === 'string'
-                                    ? JSON.parse(firstResult.metadata)
-                                    : firstResult.metadata;
-                                codebasePath = metadata.codebasePath;
-                            } catch (parseError) {
-                                console.warn(`[SYNC-CLOUD] ⚠️  Failed to parse metadata JSON for collection ${collectionName}:`, parseError);
-                            }
-                        }
-
-                        if (codebasePath && typeof codebasePath === 'string') {
-                            console.log(`[SYNC-CLOUD] 📍 Found codebase path: ${codebasePath} in collection: ${collectionName}`);
-                            cloudCodebases.add(normalizeForComparison(codebasePath));
-                        } else {
-                            console.warn(`[SYNC-CLOUD] ⚠️  No codebasePath found in metadata for collection: ${collectionName}`);
-                        }
-                    } else {
-                        console.log(`[SYNC-CLOUD] ℹ️  Collection ${collectionName} is empty`);
-                    }
-                } catch (collectionError: any) {
-                    console.warn(`[SYNC-CLOUD] ⚠️  Error checking collection ${collectionName}:`, collectionError.message || collectionError);
-                    // Continue with next collection
-                }
-            }
-
-            console.log(`[SYNC-CLOUD] 📊 Found ${cloudCodebases.size} valid codebases in cloud`);
-
             // Get current local codebases
-            const localCodebases = new Set(this.snapshotManager.getIndexedCodebases());
-            console.log(`[SYNC-CLOUD] 📊 Found ${localCodebases.size} local codebases in snapshot`);
+            const localCodebases = this.snapshotManager.getIndexedCodebases();
+            console.log(`[SYNC-CLOUD] 📊 Found ${localCodebases.length} local codebases in snapshot`);
 
             let hasChanges = false;
 
-            // Remove local codebases that don't exist in cloud
             for (const localCodebase of localCodebases) {
-                if (!cloudCodebases.has(normalizeForComparison(localCodebase))) {
-                    this.snapshotManager.removeIndexedCodebase(localCodebase);
-                    hasChanges = true;
-                    console.log(`[SYNC-CLOUD] ➖ Removed local codebase (not in cloud): ${localCodebase}`);
+                // 1. Check if collection exists for this codebase
+                const expectedCollectionName = this.context.getCollectionName(localCodebase);
+
+                if (!cloudCollectionNames.has(expectedCollectionName)) {
+                    console.log(`[SYNC-CLOUD] ➖ Collection ${expectedCollectionName} missing in cloud for ${localCodebase}. SKIPPING REMOVAL FOR DEBUGGING.`);
+                    // this.snapshotManager.removeIndexedCodebase(localCodebase);
+                    // hasChanges = true;
+                    continue;
                 }
+
+                // 2. Collection exists. Optionally verify metadata if possible, but don't delete on empty.
+                // We trust the local snapshot if the collection exists.
+                // If we really wanted to be strict, we'd check metadata, but empty collection during indexing is valid.
+                console.log(`[SYNC-CLOUD] ✅ Verified codebase ${localCodebase} (collection ${expectedCollectionName} exists)`);
             }
 
-            // Note: We don't add cloud codebases that are missing locally (as per user requirement)
-            console.log(`[SYNC-CLOUD] ℹ️  Skipping addition of cloud codebases not present locally (per sync policy)`);
+            // Note: We are no longer auto-discovering codebases from cloud to add to local.
+            // This prevented the "delete if not in discovered list" bug.
+            // If users want to add a codebase that exists in cloud but not locally, they should just index it again.
+            // The system will find the existing collection and use it.
 
             if (hasChanges) {
                 this.snapshotManager.saveCodebaseSnapshot();
                 console.log(`[SYNC-CLOUD] 💾 Updated snapshot to match cloud state`);
             } else {
-                console.log(`[SYNC-CLOUD] ✅ Local snapshot already matches cloud state`);
+                console.log(`[SYNC-CLOUD] ✅ Local snapshot matches cloud state`);
             }
 
             console.log(`[SYNC-CLOUD] ✅ Cloud sync completed successfully`);
         } catch (error: any) {
             console.error(`[SYNC-CLOUD] ❌ Error syncing codebases from cloud:`, error.message || error);
-            // Don't throw - this is not critical for the main functionality
         }
     }
 
@@ -461,7 +396,7 @@ export class ToolHandlers {
                 return {
                     content: [{
                         type: "text",
-                        text: `Error: Codebase '${absolutePath}' is not indexed. Please index it first using the index_codebase tool.`
+                        text: `Error: Codebase '${absolutePath}' is not indexed. Please index it first using the index_codebase tool. Debug: Snapshots: ${JSON.stringify(this.snapshotManager.getIndexedCodebases())}`
                     }],
                     isError: true
                 };

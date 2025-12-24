@@ -38,7 +38,7 @@ export function getDefaultModelForProvider(provider: string): string {
         case 'Ollama':
             return 'nomic-embed-text';
         case 'LMStudio':
-            return 'nomic-embed-text';
+            return 'text-embedding-nomic-embed-text-v1.5';
         default:
             return 'text-embedding-3-small';
     }
@@ -58,8 +58,8 @@ export function createMcpConfig(): ContextMcpConfig {
         name: envManager.get('MCP_SERVER_NAME') || "Context MCP Server",
         version: envManager.get('MCP_SERVER_VERSION') || "1.0.0",
         // Embedding provider configuration
-        embeddingProvider: (envManager.get('EMBEDDING_PROVIDER') as any) || 'OpenAI',
-        embeddingModel: envManager.get('EMBEDDING_MODEL') || getDefaultModelForProvider(envManager.get('EMBEDDING_PROVIDER') || 'OpenAI'),
+        embeddingProvider: (envManager.get('EMBEDDING_PROVIDER') as any) || 'LMStudio',
+        embeddingModel: envManager.get('EMBEDDING_MODEL') || getDefaultModelForProvider(envManager.get('EMBEDDING_PROVIDER') || 'LMStudio'),
         // Provider-specific API keys
         openaiApiKey: envManager.get('OPENAI_API_KEY'),
         openaiBaseUrl: envManager.get('OPENAI_BASE_URL'),
@@ -72,7 +72,7 @@ export function createMcpConfig(): ContextMcpConfig {
         // LM Studio configuration
         lmStudioBaseUrl: envManager.get('LMSTUDIO_BASE_URL') || 'http://localhost:1234/v1',
         // Vector database configuration
-        vectorStoreProvider: (envManager.get('VECTOR_STORE_PROVIDER') as any) || 'Milvus',
+        vectorStoreProvider: (envManager.get('VECTOR_STORE_PROVIDER') as any) || 'Qdrant',
         milvusAddress: envManager.get('MILVUS_ADDRESS'),
         milvusToken: envManager.get('MILVUS_TOKEN'),
         qdrantAddress: envManager.get('QDRANT_ADDRESS') || 'http://localhost:6333'
