@@ -51,7 +51,7 @@ Add the following to your MCP client configuration (e.g., Cursor, Claude Desktop
       ],
       "env": {
         "EMBEDDING_PROVIDER": "LMStudio",
-        "EMBEDDING_MODEL": "nomic-embed-text",
+        "EMBEDDING_MODEL": "text-embedding-nomic-embed-text-v1.5",
         "LMSTUDIO_BASE_URL": "http://localhost:1234/v1",
         "VECTOR_STORE_PROVIDER": "Qdrant",
         "QDRANT_ADDRESS": "http://localhost:6333"
