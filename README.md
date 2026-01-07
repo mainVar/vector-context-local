@@ -31,7 +31,10 @@ This version introduces several key improvements for local-first developer exper
         -v $(pwd)/qdrant_storage:/qdrant/storage:z \
         qdrant/qdrant
     ```
-
+for second conteiner use
+docker run -p 6335:6333 -p 6336:6334 `
+    -v ${PWD}/qdrant_storage_v2:/qdrant/storage:z `
+    qdrant/qdrant
 2.  **Run LM Studio:**
     - Download and install [LM Studio](https://lmstudio.ai/).
     - Load an embedding model (e.g., `nomic-embed-text`).
