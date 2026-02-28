@@ -1,9 +1,22 @@
 #!/usr/bin/env node
 
-// CRITICAL: Redirect console outputs to stderr IMMEDIATELY to avoid interfering with MCP JSON protocol
-// Only MCP protocol messages should go to stdout
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+    ListToolsRequestSchema,
+    CallToolRequestSchema
+} from "@modelcontextprotocol/sdk/types.js";
+import { Context, MilvusVectorDatabase, QdrantVectorDB, logger } from "@zilliz/claude-context-core";
+
+import { createMcpConfig, logConfigurationSummary, showHelpMessage, ContextMcpConfig } from "./config.js";
+import { createEmbeddingInstance, logEmbeddingProviderInfo } from "./embedding.js";
+import { SnapshotManager } from "./snapshot.js";
+import { SyncManager } from "./sync.js";
+import { ToolHandlers } from "./handlers.js";
+
 const originalConsoleLog = console.log;
 const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
 
 console.log = (...args: any[]) => {
     process.stderr.write('[LOG] ' + args.join(' ') + '\n');
@@ -13,23 +26,9 @@ console.warn = (...args: any[]) => {
     process.stderr.write('[WARN] ' + args.join(' ') + '\n');
 };
 
-// console.error already goes to stderr by default
-
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-    ListToolsRequestSchema,
-    CallToolRequestSchema
-} from "@modelcontextprotocol/sdk/types.js";
-import { Context } from "@zilliz/claude-context-core";
-import { MilvusVectorDatabase, QdrantVectorDB } from "@zilliz/claude-context-core";
-
-// Import our modular components
-import { createMcpConfig, logConfigurationSummary, showHelpMessage, ContextMcpConfig } from "./config.js";
-import { createEmbeddingInstance, logEmbeddingProviderInfo } from "./embedding.js";
-import { SnapshotManager } from "./snapshot.js";
-import { SyncManager } from "./sync.js";
-import { ToolHandlers } from "./handlers.js";
+console.error = (...args: any[]) => {
+    process.stderr.write('[ERROR] ' + args.join(' ') + '\n');
+};
 
 class ContextMcpServer {
     private server: Server;
@@ -52,20 +51,18 @@ class ContextMcpServer {
             }
         );
 
-        // Initialize embedding provider
-        console.log(`[EMBEDDING] Initializing embedding provider: ${config.embeddingProvider}`);
-        console.log(`[EMBEDDING] Using model: ${config.embeddingModel}`);
+        logger.debug("EMBEDDING", `Initializing embedding provider: ${config.embeddingProvider}`);
+        logger.debug("EMBEDDING", `Using model: ${config.embeddingModel}`);
 
         const embedding = createEmbeddingInstance(config);
         logEmbeddingProviderInfo(config, embedding);
 
-        // Initialize vector database
         let vectorDatabase;
         if (config.vectorStoreProvider === 'Qdrant') {
-            console.log(`[VECTORDB] 🔧 Initializing Qdrant vector database at ${config.qdrantAddress}`);
+            logger.debug("VECTORDB", `🔧 Initializing Qdrant vector database at ${config.qdrantAddress}`);
             vectorDatabase = new QdrantVectorDB(config.qdrantAddress);
         } else {
-            console.log(`[VECTORDB] 🔧 Initializing Milvus vector database`);
+            logger.debug("VECTORDB", "🔧 Initializing Milvus vector database");
             vectorDatabase = new MilvusVectorDatabase({
                 address: config.milvusAddress,
                 ...(config.milvusToken && { token: config.milvusToken })
@@ -253,20 +250,19 @@ This tool is versatile and can be used before completing various tasks to retrie
     }
 
     async start() {
-        console.log('[SYNC-DEBUG] MCP server start() method called');
-        console.log('Starting Context MCP server...');
+        logger.debug("SYNC-DEBUG", "MCP server start() method called");
+        logger.info("MCP", "Starting Context MCP server...");
 
         const transport = new StdioServerTransport();
-        console.log('[SYNC-DEBUG] StdioServerTransport created, attempting server connection...');
+        logger.debug("SYNC-DEBUG", "StdioServerTransport created, attempting server connection...");
 
         await this.server.connect(transport);
-        console.log("MCP server started and listening on stdio.");
-        console.log('[SYNC-DEBUG] Server connection established successfully');
+        logger.info("MCP", "MCP server started and listening on stdio.");
+        logger.debug("SYNC-DEBUG", "Server connection established successfully");
 
-        // Start background sync after server is connected
-        console.log('[SYNC-DEBUG] Initializing background sync...');
+        logger.debug("SYNC-DEBUG", "Initializing background sync...");
         this.syncManager.startBackgroundSync();
-        console.log('[SYNC-DEBUG] MCP server initialization complete');
+        logger.debug("SYNC-DEBUG", "MCP server initialization complete");
     }
 }
 
@@ -289,19 +285,17 @@ async function main() {
     await server.start();
 }
 
-// Handle graceful shutdown
 process.on('SIGINT', () => {
-    console.error("Received SIGINT, shutting down gracefully...");
+    logger.error("SHUTDOWN", "Received SIGINT, shutting down gracefully...");
     process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-    console.error("Received SIGTERM, shutting down gracefully...");
+    logger.error("SHUTDOWN", "Received SIGTERM, shutting down gracefully...");
     process.exit(0);
 });
 
-// Always start the server - this is designed to be the main entry point
 main().catch((error) => {
-    console.error("Fatal error:", error);
+    logger.error("FATAL", "Fatal error:", error);
     process.exit(1);
 });

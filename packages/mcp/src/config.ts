@@ -1,4 +1,4 @@
-import { envManager } from "@zilliz/claude-context-core";
+import { envManager, logger } from "@zilliz/claude-context-core";
 
 export interface ContextMcpConfig {
     name: string;
@@ -47,12 +47,10 @@ export function getDefaultModelForProvider(provider: string): string {
 // ...
 
 export function createMcpConfig(): ContextMcpConfig {
-    // Debug: Print all environment variables related to Context
-    console.log(`[DEBUG] 🔍 Environment Variables Debug:`);
-    console.log(`[DEBUG]   EMBEDDING_PROVIDER: ${envManager.get('EMBEDDING_PROVIDER') || 'NOT SET'}`);
-    console.log(`[DEBUG]   EMBEDDING_MODEL: ${envManager.get('EMBEDDING_MODEL') || 'NOT SET'}`);
-    console.log(`[DEBUG]   VECTOR_STORE_PROVIDER: ${envManager.get('VECTOR_STORE_PROVIDER') || 'NOT SET'}`);
-    // ... other logs ...
+    logger.debug("DEBUG", "🔍 Environment Variables Debug:");
+    logger.debug("DEBUG", `  EMBEDDING_PROVIDER: ${envManager.get('EMBEDDING_PROVIDER') || 'NOT SET'}`);
+    logger.debug("DEBUG", `  EMBEDDING_MODEL: ${envManager.get('EMBEDDING_MODEL') || 'NOT SET'}`);
+    logger.debug("DEBUG", `  VECTOR_STORE_PROVIDER: ${envManager.get('VECTOR_STORE_PROVIDER') || 'NOT SET'}`);
 
     const config: ContextMcpConfig = {
         name: envManager.get('MCP_SERVER_NAME') || "Context MCP Server",
@@ -82,46 +80,44 @@ export function createMcpConfig(): ContextMcpConfig {
 }
 
 export function logConfigurationSummary(config: ContextMcpConfig): void {
-    // Log configuration summary before starting server
-    console.log(`[MCP] 🚀 Starting Context MCP Server`);
-    console.log(`[MCP] Configuration Summary:`);
-    console.log(`[MCP]   Server: ${config.name} v${config.version}`);
-    console.log(`[MCP]   Embedding Provider: ${config.embeddingProvider}`);
-    console.log(`[MCP]   Embedding Model: ${config.embeddingModel}`);
-    console.log(`[MCP]   Milvus Address: ${config.milvusAddress || (config.milvusToken ? '[Auto-resolve from token]' : '[Not configured]')}`);
+    logger.info("MCP", "🚀 Starting Context MCP Server");
+    logger.info("MCP", "Configuration Summary:");
+    logger.info("MCP", `  Server: ${config.name} v${config.version}`);
+    logger.info("MCP", `  Embedding Provider: ${config.embeddingProvider}`);
+    logger.info("MCP", `  Embedding Model: ${config.embeddingModel}`);
+    logger.debug("MCP", `  Milvus Address: ${config.milvusAddress || (config.milvusToken ? '[Auto-resolve from token]' : '[Not configured]')}`);
 
-    // Log provider-specific configuration without exposing sensitive data
     switch (config.embeddingProvider) {
         case 'OpenAI':
-            console.log(`[MCP]   OpenAI API Key: ${config.openaiApiKey ? '✅ Configured' : '❌ Missing'}`);
+            logger.info("MCP", `  OpenAI API Key: ${config.openaiApiKey ? '✅ Configured' : '❌ Missing'}`);
             if (config.openaiBaseUrl) {
-                console.log(`[MCP]   OpenAI Base URL: ${config.openaiBaseUrl}`);
+                logger.debug("MCP", `  OpenAI Base URL: ${config.openaiBaseUrl}`);
             }
             break;
         case 'VoyageAI':
-            console.log(`[MCP]   VoyageAI API Key: ${config.voyageaiApiKey ? '✅ Configured' : '❌ Missing'}`);
+            logger.info("MCP", `  VoyageAI API Key: ${config.voyageaiApiKey ? '✅ Configured' : '❌ Missing'}`);
             break;
         case 'Gemini':
-            console.log(`[MCP]   Gemini API Key: ${config.geminiApiKey ? '✅ Configured' : '❌ Missing'}`);
+            logger.info("MCP", `  Gemini API Key: ${config.geminiApiKey ? '✅ Configured' : '❌ Missing'}`);
             if (config.geminiBaseUrl) {
-                console.log(`[MCP]   Gemini Base URL: ${config.geminiBaseUrl}`);
+                logger.debug("MCP", `  Gemini Base URL: ${config.geminiBaseUrl}`);
             }
             break;
         case 'Ollama':
-            console.log(`[MCP]   Ollama Host: ${config.ollamaHost || 'http://127.0.0.1:11434'}`);
-            console.log(`[MCP]   Ollama Model: ${config.embeddingModel}`);
+            logger.info("MCP", `  Ollama Host: ${config.ollamaHost || 'http://127.0.0.1:11434'}`);
+            logger.info("MCP", `  Ollama Model: ${config.embeddingModel}`);
             break;
         case 'LMStudio':
-            console.log(`[MCP]   LM Studio Base URL: ${config.lmStudioBaseUrl}`);
+            logger.info("MCP", `  LM Studio Base URL: ${config.lmStudioBaseUrl}`);
             break;
     }
 
-    console.log(`[MCP]   Vector Store: ${config.vectorStoreProvider}`);
+    logger.info("MCP", `  Vector Store: ${config.vectorStoreProvider}`);
     if (config.vectorStoreProvider === 'Qdrant') {
-        console.log(`[MCP]   Qdrant Address: ${config.qdrantAddress}`);
+        logger.debug("MCP", `  Qdrant Address: ${config.qdrantAddress}`);
     }
 
-    console.log(`[MCP] 🔧 Initializing server components...`);
+    logger.debug("MCP", "🔧 Initializing server components...");
 }
 
 export function showHelpMessage(): void {
