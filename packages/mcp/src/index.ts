@@ -6,7 +6,7 @@ import {
     ListToolsRequestSchema,
     CallToolRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
-import { Context, MilvusVectorDatabase, QdrantVectorDB, logger } from "@zilliz/claude-context-core";
+import { Context, MilvusVectorDatabase, QdrantVectorDB, logger } from "@vector-context/core";
 
 import { createMcpConfig, logConfigurationSummary, showHelpMessage, ContextMcpConfig } from "./config.js";
 import { createEmbeddingInstance, logEmbeddingProviderInfo } from "./embedding.js";

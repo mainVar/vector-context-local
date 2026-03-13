@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { logger } from "@zilliz/claude-context-core";
+import { logger } from "@vector-context/core";
 import {
     CodebaseSnapshot,
     CodebaseSnapshotV1,

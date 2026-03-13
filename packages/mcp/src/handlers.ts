@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
-import { Context, COLLECTION_LIMIT_MESSAGE, logger } from "@zilliz/claude-context-core";
+import { Context, COLLECTION_LIMIT_MESSAGE, logger } from "@vector-context/core";
 import { SnapshotManager } from "./snapshot.js";
 import { ensureAbsolutePath, truncateContent, trackCodebasePath } from "./utils.js";
 
@@ -255,7 +255,7 @@ export class ToolHandlers {
 
             await this.context.getLoadedIgnorePatterns(absolutePath);
 
-            const { FileSynchronizer } = await import("@zilliz/claude-context-core");
+            const { FileSynchronizer } = await import("@vector-context/core");
             const ignorePatterns = this.context.getIgnorePatterns() || [];
             logger.debug("BACKGROUND-INDEX", `Using ignore patterns: ${ignorePatterns.join(', ')}`);
             const synchronizer = new FileSynchronizer(absolutePath, ignorePatterns);

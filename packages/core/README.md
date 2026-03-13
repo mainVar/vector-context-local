@@ -1,4 +1,4 @@
-# @zilliz/claude-context-core
+# @vector-context/core
 
 The core indexing engine for Vector Context (Local) - a powerful tool for semantic search and analysis of codebases using vector embeddings and AI, optimized for local execution and Windows stability.
 
@@ -7,7 +7,7 @@ The core indexing engine for Vector Context (Local) - a powerful tool for semant
 ## Installation
 
 ```bash
-npm install @zilliz/claude-context-core
+npm install @vector-context/core
 ```
 
 ## Quick Start (Local Setup)
@@ -15,7 +15,7 @@ npm install @zilliz/claude-context-core
 This package supports strictly local workflows using **LM Studio** for embeddings and **Qdrant** for vector storage.
 
 ```typescript
-import { Context, QdrantVectorDB, LMStudioEmbedding } from '@zilliz/claude-context-core';
+import { Context, QdrantVectorDB, LMStudioEmbedding } from '@vector-context/core';
 
 // 1. Initialize with LM Studio (local embeddings)
 const lmStudioEmbedding = new LMStudioEmbedding({

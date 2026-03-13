@@ -1,4 +1,4 @@
-import { OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, OllamaEmbedding, LMStudioEmbedding, logger } from "@zilliz/claude-context-core";
+import { OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, OllamaEmbedding, LMStudioEmbedding, logger } from "@vector-context/core";
 import { ContextMcpConfig } from "./config.js";
 
 export function createEmbeddingInstance(config: ContextMcpConfig): OpenAIEmbedding | VoyageAIEmbedding | GeminiEmbedding | OllamaEmbedding | LMStudioEmbedding {

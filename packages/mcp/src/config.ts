@@ -1,4 +1,4 @@
-import { envManager, logger } from "@zilliz/claude-context-core";
+import { envManager, logger } from "@vector-context/core";
 
 export interface ContextMcpConfig {
     name: string;

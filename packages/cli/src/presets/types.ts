@@ -1,0 +1,172 @@
+import { Preset } from '../config/types.js';
+
+export const PRESETS: Record<string, Preset> = {
+    unity: {
+        name: 'unity',
+        description: 'Unity game development project',
+        ignorePatterns: [
+            'Library/**',
+            'Temp/**',
+            'Build/**',
+            'Builds/**',
+            'Logs/**',
+            'obj/**',
+            '*.csproj',
+            '*.unityproj',
+            '*.sln',
+            '.vs/**',
+            'Assets/Plugins/Editor/**',
+            'Assets/StreamingAssets/**',
+            'ProjectSettings/**',
+            'UserSettings/**',
+            '*.apk',
+            '*.aab',
+            '*.exe',
+            '*.app',
+        ],
+        extensions: ['.cs', '.shader', '.cginc', '.hlsl', '.glsl', '.compute', '.unity', '.prefab', '.asset', '.asmdef'],
+    },
+    node: {
+        name: 'node',
+        description: 'Node.js / JavaScript / TypeScript project',
+        ignorePatterns: [
+            'node_modules/**',
+            'dist/**',
+            'build/**',
+            'out/**',
+            '.next/**',
+            '.nuxt/**',
+            'coverage/**',
+            '.nyc_output/**',
+            '*.min.js',
+            '*.min.css',
+            '*.bundle.js',
+            '*.chunk.js',
+            '*.log',
+            '.env',
+            '.env.*',
+            '*.local',
+        ],
+        extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.md'],
+    },
+    python: {
+        name: 'python',
+        description: 'Python project',
+        ignorePatterns: [
+            '__pycache__/**',
+            '*.pyc',
+            '*.pyo',
+            '*.pyd',
+            '.Python',
+            'venv/**',
+            'env/**',
+            '.venv/**',
+            '.env/**',
+            'eggs/**',
+            '*.egg-info/**',
+            '.pytest_cache/**',
+            '.mypy_cache/**',
+            '.ruff_cache/**',
+            'htmlcov/**',
+            '.tox/**',
+            'site-packages/**',
+            '*.egg',
+            '*.manifest',
+            '*.spec',
+        ],
+        extensions: ['.py', '.pyi', '.pyx', '.pxd', '.ipynb'],
+    },
+    rust: {
+        name: 'rust',
+        description: 'Rust project',
+        ignorePatterns: [
+            'target/**',
+            'Cargo.lock',
+            '**/*.rs.bk',
+            '*.pdb',
+        ],
+        extensions: ['.rs', '.toml'],
+    },
+    go: {
+        name: 'go',
+        description: 'Go project',
+        ignorePatterns: [
+            'vendor/**',
+            '*.exe',
+            '*.exe~',
+            '*.dll',
+            '*.so',
+            '*.dylib',
+            '*.test',
+            '*.out',
+        ],
+        extensions: ['.go', '.mod', '.sum'],
+    },
+    java: {
+        name: 'java',
+        description: 'Java / JVM project',
+        ignorePatterns: [
+            'target/**',
+            'build/**',
+            'out/**',
+            '.gradle/**',
+            '*.class',
+            '*.jar',
+            '*.war',
+            '*.ear',
+            '*.nar',
+            '.mvn/**',
+            'mvnw',
+            'mvnw.cmd',
+            'gradlew',
+            'gradlew.bat',
+        ],
+        extensions: ['.java', '.kt', '.kts', '.scala', '.groovy', '.gradle', '.xml'],
+    },
+    web: {
+        name: 'web',
+        description: 'Frontend web project (React, Vue, etc.)',
+        ignorePatterns: [
+            'node_modules/**',
+            'dist/**',
+            'build/**',
+            '.next/**',
+            '.nuxt/**',
+            'coverage/**',
+            '*.min.js',
+            '*.min.css',
+            '*.bundle.js',
+            '*.chunk.js',
+            '*.map',
+            '.env',
+            '.env.*',
+        ],
+        extensions: ['.ts', '.tsx', '.js', '.jsx', '.vue', '.svelte', '.css', '.scss', '.sass', '.less', '.html', '.json', '.md'],
+    },
+    minimal: {
+        name: 'minimal',
+        description: 'Minimal preset - only essential ignores',
+        ignorePatterns: [
+            'node_modules/**',
+            '.git/**',
+            '.svn/**',
+            '.hg/**',
+        ],
+        extensions: [],
+    },
+};
+
+export function getPreset(name: string): Preset | undefined {
+    return PRESETS[name];
+}
+
+export function getPresetNames(): string[] {
+    return Object.keys(PRESETS);
+}
+
+export function getPresetDescriptions(): Array<{ name: string; description: string }> {
+    return Object.values(PRESETS).map(p => ({
+        name: p.name,
+        description: p.description,
+    }));
+}

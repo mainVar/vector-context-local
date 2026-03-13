@@ -1,4 +1,4 @@
-# Contributing to @zilliz/claude-context-core
+# Contributing to @vector-context/core
 
 Thanks for your interest in contributing to the Claude Context core package!
 
