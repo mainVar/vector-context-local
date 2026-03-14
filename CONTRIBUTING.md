@@ -61,10 +61,11 @@ Thank you for your interest in contributing to Claude Context! This guide will h
 claude-context/
 ├── packages/
 │   ├── core/              # Core indexing engine
+│   ├── cli/               # CLI tool with TUI (vctx)
 │   ├── vscode-extension/  # VSCode extension
-│   └── mcp/              # Model Context Protocol server
+│   └── mcp/               # Model Context Protocol server
 ├── examples/
-│   └── basic-usage/      # Basic usage example 
+│   └── basic-usage/       # Basic usage example 
 ```
 
 ### Package-Specific Development
@@ -72,6 +73,7 @@ claude-context/
 Each package has its own development guide with specific instructions:
 
 - **[Core Package](packages/core/CONTRIBUTING.md)** - Develop the core indexing engine
+- **[CLI Package](packages/cli/README.md)** - CLI tool for project management
 - **[VSCode Extension](packages/vscode-extension/CONTRIBUTING.md)** - Develop the VSCode extension
 - **[MCP Server](packages/mcp/CONTRIBUTING.md)** - Develop the MCP protocol server
 
@@ -95,6 +97,7 @@ pnpm dev
 For detailed development instructions for each package, see:
 
 - [Core Package Development](packages/core/CONTRIBUTING.md)
+- [CLI Package Development](packages/cli/README.md)
 - [VSCode Extension Development](packages/vscode-extension/CONTRIBUTING.md)
 - [MCP Server Development](packages/mcp/CONTRIBUTING.md)
 
@@ -115,7 +118,7 @@ refactor(mcp): improve error handling
 
 **Types**: `feat`, `fix`, `docs`, `refactor`, `perf`, `chore`
 
-**Scopes**: `core`, `vscode`, `mcp`, `examples`, `docs`
+**Scopes**: `core`, `cli`, `vscode`, `mcp`, `examples`, `docs`
 
 ### Pull Request Process
 

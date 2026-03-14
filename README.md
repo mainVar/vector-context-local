@@ -69,7 +69,100 @@ Add the following to your MCP client configuration (e.g., Cursor, Claude Desktop
 
 ---
 
-## 🛠️ Usage
+## 🖥️ CLI Tool (vctx)
+
+The `@vector-context/cli` package provides a command-line interface for managing project indexing with an interactive TUI.
+
+### Installation
+
+```bash
+# In monorepo
+pnpm install
+
+# Build
+pnpm --filter @vector-context/cli build
+```
+
+### Quick Start
+
+```bash
+# Interactive TUI mode
+vctx
+
+# Or use commands directly
+vctx add ./my-project --preset node
+vctx index ./my-project
+vctx status
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `vctx` or `vctx interactive` | Launch interactive TUI |
+| `vctx add <path>` | Add project to config |
+| `vctx remove <path>` | Remove project |
+| `vctx list` | List all projects |
+| `vctx index [path]` | Index project(s) |
+| `vctx status [path]` | Show indexing status |
+| `vctx ignore <path> <add\|remove\|list> [pattern]` | Manage ignore patterns |
+| `vctx preset <path> [name]` | Set or view preset |
+| `vctx presets` | List available presets |
+
+### Presets
+
+| Preset | Description |
+|--------|-------------|
+| `unity` | Unity game development |
+| `node` | Node.js / TypeScript |
+| `python` | Python projects |
+| `rust` | Rust projects |
+| `go` | Go projects |
+| `java` | Java / JVM |
+| `web` | Frontend (React, Vue, etc.) |
+| `minimal` | Minimal ignore patterns |
+
+### Examples
+
+```bash
+# Add Unity project with custom ignore
+vctx add ./my-game --preset unity --ignore "Assets/Plugins/**"
+
+# Add Node.js project
+vctx add ./api --preset node
+
+# Index all enabled projects
+vctx index
+
+# Check status
+vctx status ./my-game
+
+# Manage ignore patterns
+vctx ignore ./my-game add "*.test.ts"
+vctx ignore ./my-game list --all
+```
+
+### TUI Interface
+
+```
+╔════════════════════════════════════════════════════════════╗
+║  Vector Context CLI - Project Manager                       ║
+╠════════════════════════════════════════════════════════════╣
+║  Projects:                                        [a] Add   ║
+║                                                             ║
+║  ● my-game           indexed    234 files         [e] Edit ║
+║  ○ api               indexing  45% ████░░         [r] Remove║
+║  ○ web-app           waiting                      [i] Index ║
+║                                                             ║
+║  [p] Presets  [l] Refresh  [q] Quit                        ║
+╚════════════════════════════════════════════════════════════╝
+```
+
+**TUI Keys:** `↑/↓` Navigate | `a` Add | `r` Remove | `i` Index | `e` Edit | `q` Quit
+
+---
+
+## 🤖 MCP Usage (Claude/Cursor)
 
 1. **Open Claude Code**
    ```bash
@@ -96,10 +189,23 @@ Add the following to your MCP client configuration (e.g., Cursor, Claude Desktop
 
 ## 🏗️ Architecture
 
+### Packages
+
+| Package | Description |
+|---------|-------------|
+| `@vector-context/core` | Core indexing engine with semantic search |
+| `@vector-context/cli` | CLI tool with interactive TUI (`vctx`) |
+| `@zilliz/claude-context-mcp` | MCP server for Claude/Cursor integration |
+| `@zilliz/claude-context-chrome-extension` | Chrome extension for web indexing |
+| `@zilliz/claude-context-vscode` | VS Code extension |
+
+### Features
+
 - 🔍 **Hybrid Code Search**: Combines BM25 and dense vector search for high-precision retrieval.
 - ⚡ **Incremental Indexing**: Efficiently re-index only changed files using Merkle trees.
 - 🧩 **Intelligent Code Chunking**: Analyzes code using Abstract Syntax Trees (AST) for meaningful boundaries.
 - 🛠️ **Cross-Platform**: Fully optimized for Windows stability.
+- 🖥️ **CLI & TUI**: Manage projects via command line or interactive interface.
 
 ### Supported Technologies
 
@@ -123,6 +229,19 @@ pnpm install
 
 # Build all packages
 pnpm build
+
+# Run CLI
+node packages/cli/dist/index.js --help
+```
+
+### Build Specific Package
+
+```bash
+# Build CLI only
+pnpm --filter @vector-context/cli build
+
+# Build core only
+pnpm --filter @vector-context/core build
 ```
 
 ---
