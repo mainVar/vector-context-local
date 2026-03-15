@@ -60,6 +60,9 @@ function App() {
         setState(prev => ({ ...prev, message, messageType: type }));
     };
 
+    const { projects, selected, selectedPreset, screen, input, message, messageType } = state;
+    const selectedProject = projects[selected];
+
     useInput((input, key) => {
         if (state.screen === 'main') {
             if (key.upArrow) {
@@ -116,9 +119,10 @@ function App() {
                     ...prev,
                     selectedPreset: Math.min(presets.length - 1, prev.selectedPreset + 1),
                 }));
-            } else if (key.return && selectedProject) {
+            } else if (key.return && state.projects[state.selected]) {
                 const preset = presets[state.selectedPreset];
-                configManager.updateProject(selectedProject.path, { preset: preset.name });
+                const project = state.projects[state.selected];
+                configManager.updateProject(project.path, { preset: preset.name });
                 showMessage(`Preset changed to: ${preset.name}`, 'success');
                 refreshProjects();
                 setState(prev => ({ ...prev, screen: 'main' }));
@@ -150,9 +154,6 @@ function App() {
             }
         }
     });
-
-    const { projects, selected, selectedPreset, screen, input, message, messageType } = state;
-    const selectedProject = projects[selected];
 
     if (screen === 'indexing') {
         return (
