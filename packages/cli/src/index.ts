@@ -9,6 +9,7 @@ import { statusCommand } from './commands/status.js';
 import { indexCommand } from './commands/index.js';
 import { ignoreCommand, setIgnoreOptions } from './commands/ignore.js';
 import { presetCommand, listPresets } from './commands/preset.js';
+import { watchCommand } from './commands/watch.js';
 import { getPresetDescriptions } from './presets/types.js';
 import { runTUI } from './tui/index.js';
 
@@ -18,6 +19,7 @@ ${chalk.bold('Usage')}
 
 ${chalk.bold('Commands')}
   interactive, i    Run interactive TUI mode (default)
+  watch, w          Watch projects and auto-reindex on changes
   add <path>        Add a project to config
   remove <path>     Remove a project from config
   list              List all configured projects
@@ -136,6 +138,11 @@ async function main(): Promise<void> {
 
         case 'presets':
             listPresets();
+            break;
+
+        case 'watch':
+        case 'w':
+            await watchCommand();
             break;
 
         default:

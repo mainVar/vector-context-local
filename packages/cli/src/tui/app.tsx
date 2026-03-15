@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { render, Box, Text, useInput, useApp } from 'ink';
 import chalk from 'chalk';
 import { configManager } from '../config/manager.js';
@@ -9,6 +9,7 @@ import { getPresetDescriptions } from '../presets/types.js';
 import { indexCommand } from '../commands/index.js';
 import { addCommand } from '../commands/add.js';
 import { removeCommand } from '../commands/remove.js';
+import { watchCommand } from '../commands/watch.js';
 
 type Screen = 'main' | 'add' | 'edit' | 'presets' | 'indexing';
 
@@ -60,11 +61,15 @@ function App() {
         setState(prev => ({ ...prev, message, messageType: type }));
     };
 
+    const stateRef = useRef(state);
+    stateRef.current = state;
+
     const { projects, selected, selectedPreset, screen, input, message, messageType } = state;
     const selectedProject = projects[selected];
 
-    useInput((input, key) => {
-        if (state.screen === 'main') {
+    useInput((inputKey, key) => {
+        const currentState = stateRef.current;
+        if (currentState.screen === 'main') {
             if (key.upArrow) {
                 setState(prev => ({
                     ...prev,
@@ -75,15 +80,15 @@ function App() {
                     ...prev,
                     selected: Math.min(prev.projects.length - 1, prev.selected + 1),
                 }));
-            } else if (input === 'a') {
+            } else if (inputKey === 'a') {
                 setState(prev => ({ ...prev, screen: 'add', input: '' }));
-            } else if (input === 'r' && state.projects[state.selected]) {
-                const project = state.projects[state.selected];
+            } else if (inputKey === 'r' && currentState.projects[currentState.selected]) {
+                const project = currentState.projects[currentState.selected];
                 configManager.removeProject(project.path);
                 showMessage(`Removed: ${project.name}`, 'success');
                 refreshProjects();
-            } else if (input === 'i' && state.projects[state.selected]) {
-                const project = state.projects[state.selected];
+            } else if (inputKey === 'i' && currentState.projects[currentState.selected]) {
+                const project = currentState.projects[currentState.selected];
                 setState(prev => ({ ...prev, screen: 'indexing' }));
                 indexCommand(project.path, { verbose: false })
                     .then(() => {
@@ -95,17 +100,23 @@ function App() {
                         showMessage(`Error: ${err.message}`, 'error');
                         setState(prev => ({ ...prev, screen: 'main' }));
                     });
-            } else if (input === 'e' && state.projects[state.selected]) {
+            } else if (inputKey === 'e' && currentState.projects[currentState.selected]) {
                 setState(prev => ({ ...prev, screen: 'edit' }));
-            } else if (input === 'p' && state.projects[state.selected]) {
+            } else if (inputKey === 'p' && currentState.projects[currentState.selected]) {
                 setState(prev => ({ ...prev, screen: 'presets', selectedPreset: 0 }));
-            } else if (input === 'l') {
+            } else if (inputKey === 'l') {
                 refreshProjects();
                 showMessage('Projects refreshed', 'info');
-            } else if (key.escape || input === 'q') {
+            } else if (inputKey === 'w') {
+                (async () => {
+                    exit();
+                    await new Promise(r => setTimeout(r, 100));
+                    await watchCommand();
+                })();
+            } else if (key.escape || inputKey === 'q') {
                 exit();
             }
-        } else if (state.screen === 'presets') {
+        } else if (currentState.screen === 'presets') {
             const presets = getPresetDescriptions();
             if (key.escape) {
                 setState(prev => ({ ...prev, screen: 'main' }));
@@ -119,9 +130,9 @@ function App() {
                     ...prev,
                     selectedPreset: Math.min(presets.length - 1, prev.selectedPreset + 1),
                 }));
-            } else if (key.return && state.projects[state.selected]) {
-                const preset = presets[state.selectedPreset];
-                const project = state.projects[state.selected];
+            } else if (key.return && currentState.projects[currentState.selected]) {
+                const preset = presets[currentState.selectedPreset];
+                const project = currentState.projects[currentState.selected];
                 configManager.updateProject(project.path, { preset: preset.name });
                 showMessage(`Preset changed to: ${preset.name}`, 'success');
                 refreshProjects();
@@ -131,10 +142,10 @@ function App() {
             if (key.escape) {
                 setState(prev => ({ ...prev, screen: 'main', input: '' }));
             } else if (key.return) {
-                if (state.screen === 'add' && state.input.trim()) {
+                if (currentState.screen === 'add' && currentState.input.trim()) {
                     try {
-                        addCommand(state.input.trim(), {});
-                        showMessage(`Added: ${state.input.trim()}`, 'success');
+                        addCommand(currentState.input.trim(), {});
+                        showMessage(`Added: ${currentState.input.trim()}`, 'success');
                         refreshProjects();
                     } catch (err: any) {
                         showMessage(`Error: ${err.message}`, 'error');
@@ -146,10 +157,10 @@ function App() {
                     ...prev,
                     input: prev.input.slice(0, -1),
                 }));
-            } else if (input && !key.ctrl && !key.meta) {
+            } else if (inputKey && !key.ctrl && !key.meta) {
                 setState(prev => ({
                     ...prev,
-                    input: prev.input + input,
+                    input: prev.input + inputKey,
                 }));
             }
         }
@@ -282,7 +293,7 @@ function App() {
 
             <Box marginTop={1}>
                 <Text dimColor>
-                    [a] Add [r] Remove [i] Index [e] Edit [p] Presets [l] Refresh [q] Quit
+                    [a] Add [r] Remove [i] Index [e] Edit [p] Presets [l] Refresh [w] Watch [q] Quit
                 </Text>
             </Box>
         </Box>
