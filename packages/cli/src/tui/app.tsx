@@ -15,6 +15,7 @@ type Screen = 'main' | 'add' | 'edit' | 'presets' | 'indexing';
 interface TUIState {
     projects: ProjectWithStatus[];
     selected: number;
+    selectedPreset: number;
     screen: Screen;
     input: string;
     message: string | null;
@@ -26,6 +27,7 @@ function App() {
     const [state, setState] = useState<TUIState>({
         projects: [],
         selected: 0,
+        selectedPreset: 0,
         screen: 'main',
         input: '',
         message: null,
@@ -92,13 +94,34 @@ function App() {
                     });
             } else if (input === 'e' && state.projects[state.selected]) {
                 setState(prev => ({ ...prev, screen: 'edit' }));
-            } else if (input === 'p') {
-                setState(prev => ({ ...prev, screen: 'presets' }));
+            } else if (input === 'p' && state.projects[state.selected]) {
+                setState(prev => ({ ...prev, screen: 'presets', selectedPreset: 0 }));
             } else if (input === 'l') {
                 refreshProjects();
                 showMessage('Projects refreshed', 'info');
             } else if (key.escape || input === 'q') {
                 exit();
+            }
+        } else if (state.screen === 'presets') {
+            const presets = getPresetDescriptions();
+            if (key.escape) {
+                setState(prev => ({ ...prev, screen: 'main' }));
+            } else if (key.upArrow) {
+                setState(prev => ({
+                    ...prev,
+                    selectedPreset: Math.max(0, prev.selectedPreset - 1),
+                }));
+            } else if (key.downArrow) {
+                setState(prev => ({
+                    ...prev,
+                    selectedPreset: Math.min(presets.length - 1, prev.selectedPreset + 1),
+                }));
+            } else if (key.return && selectedProject) {
+                const preset = presets[state.selectedPreset];
+                configManager.updateProject(selectedProject.path, { preset: preset.name });
+                showMessage(`Preset changed to: ${preset.name}`, 'success');
+                refreshProjects();
+                setState(prev => ({ ...prev, screen: 'main' }));
             }
         } else {
             if (key.escape) {
@@ -128,7 +151,7 @@ function App() {
         }
     });
 
-    const { projects, selected, screen, input, message, messageType } = state;
+    const { projects, selected, selectedPreset, screen, input, message, messageType } = state;
     const selectedProject = projects[selected];
 
     if (screen === 'indexing') {
@@ -160,17 +183,26 @@ function App() {
         const presets = getPresetDescriptions();
         return (
             <Box flexDirection="column" padding={1}>
-                <Text bold color="cyan">Available Presets</Text>
+                <Text bold color="cyan">Select Preset for: {selectedProject?.name}</Text>
+                <Text dimColor>Current: {selectedProject?.preset || 'none'}</Text>
                 <Box flexDirection="column" marginTop={1}>
-                    {presets.map(preset => (
-                        <Box key={preset.name}>
-                            <Text color="yellow">{preset.name.padEnd(10)}</Text>
-                            <Text dimColor>{preset.description}</Text>
-                        </Box>
-                    ))}
+                    {presets.map((preset, index) => {
+                        const isSelected = index === state.selectedPreset;
+                        const isCurrent = preset.name === selectedProject?.preset;
+                        return (
+                            <Box key={preset.name}>
+                                <Text color={isSelected ? 'cyan' : undefined}>
+                                    {isSelected ? '> ' : '  '}
+                                    {isCurrent ? '* ' : '  '}
+                                    <Text color="yellow">{preset.name.padEnd(10)}</Text>
+                                    <Text dimColor>{preset.description}</Text>
+                                </Text>
+                            </Box>
+                        );
+                    })}
                 </Box>
                 <Box marginTop={1}>
-                    <Text dimColor>Press Escape to go back</Text>
+                    <Text dimColor>↑↓ Navigate | Enter Apply | Esc Cancel</Text>
                 </Box>
             </Box>
         );
