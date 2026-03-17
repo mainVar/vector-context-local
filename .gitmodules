@@ -1,0 +1,3 @@
+[submodule "packages/vector-context-cli"]
+	path = packages/vector-context-cli
+	url = https://github.com/mainVar/vector-context-cli.git
