@@ -13,7 +13,6 @@ import {
     VectorDocument,
     VectorSearchResult,
     HybridSearchRequest,
-    HybridSearchOptions,
     HybridSearchResult
 } from './vectordb';
 import { SemanticSearchResult } from './types';
@@ -421,7 +420,7 @@ export class Context {
 
         if (isHybrid === true) {
             try {
-                const stats = await this.vectorDatabase.query(collectionName, '', ['id'], 1);
+                await this.vectorDatabase.query(collectionName, '', ['id'], 1);
                 logger.debug("Context", `🔍 Collection '${collectionName}' exists and appears to have data`);
             } catch (error) {
                 logger.debug("Context", `⚠️  Collection '${collectionName}' exists but may be empty or not properly indexed:`, error);
@@ -771,12 +770,12 @@ export class Context {
 
                 const relativePath = path.relative(codebasePath, chunk.metadata.filePath);
                 const fileExtension = path.extname(chunk.metadata.filePath);
-                const { filePath, startLine, endLine, ...restMetadata } = chunk.metadata;
+                const { filePath: _filePath, startLine: _startLine, endLine: _endLine, ...restMetadata } = chunk.metadata;
 
                 return {
                     id: this.generateId(relativePath, chunk.metadata.startLine || 0, chunk.metadata.endLine || 0, chunk.content),
-                    content: chunk.content, // Full text content for BM25 and storage
-                    vector: embeddings[index].vector, // Dense vector
+                    content: chunk.content,
+                    vector: embeddings[index].vector,
                     relativePath,
                     startLine: chunk.metadata.startLine || 0,
                     endLine: chunk.metadata.endLine || 0,
@@ -801,7 +800,7 @@ export class Context {
 
                 const relativePath = path.relative(codebasePath, chunk.metadata.filePath);
                 const fileExtension = path.extname(chunk.metadata.filePath);
-                const { filePath, startLine, endLine, ...restMetadata } = chunk.metadata;
+                const { filePath: _filePath, startLine: _startLine, endLine: _endLine, ...restMetadata } = chunk.metadata;
 
                 return {
                     id: this.generateId(relativePath, chunk.metadata.startLine || 0, chunk.metadata.endLine || 0, chunk.content),
@@ -947,7 +946,7 @@ export class Context {
             const homeDir = require('os').homedir();
             const globalIgnorePath = path.join(homeDir, '.context', '.contextignore');
             return await this.loadIgnoreFile(globalIgnorePath, 'global .contextignore');
-        } catch (error) {
+        } catch {
             return [];
         }
     }
@@ -966,7 +965,7 @@ export class Context {
                 logger.debug("Context", `📄 ${fileName} file found but no valid patterns detected`);
                 return [];
             }
-        } catch (error) {
+        } catch {
             if (fileName.includes('global')) {
                 logger.debug("Context", `📄 No ${fileName} file found`);
             }

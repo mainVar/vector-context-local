@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Context } from '@vector-context/core';
 import * as fs from 'fs';
+import { logger } from '../utils/logger';
 
 export class SyncCommand {
     private context: Context;
@@ -42,7 +43,7 @@ export class SyncCommand {
             return;
         }
 
-        console.log(`[SYNC] Starting sync for current workspace: ${codebasePath}`);
+        logger.info('SYNC', `Starting sync for current workspace: ${codebasePath}`);
 
         this.isSyncing = true;
 
@@ -68,7 +69,7 @@ export class SyncCommand {
                         }
                     );
                 } catch (error: any) {
-                    console.error(`[SYNC] Error syncing workspace '${codebasePath}':`, error);
+                    logger.error('SYNC', `Error syncing workspace '${codebasePath}':`, error);
                     throw error;
                 }
             });
@@ -80,19 +81,19 @@ export class SyncCommand {
                     vscode.window.showInformationMessage(
                         `✅ Sync complete!\n\nAdded: ${syncStats.added}, Removed: ${syncStats.removed}, Modified: ${syncStats.modified} files.`
                     );
-                    console.log(`[SYNC] Sync complete for '${codebasePath}'. Added: ${syncStats.added}, Removed: ${syncStats.removed}, Modified: ${syncStats.modified}`);
+                    logger.info('SYNC', `Sync complete for '${codebasePath}'. Added: ${syncStats.added}, Removed: ${syncStats.removed}, Modified: ${syncStats.modified}`);
                 } else {
                     vscode.window.showInformationMessage('✅ Sync complete! No changes detected.');
-                    console.log(`[SYNC] No changes detected for '${codebasePath}'`);
+                    logger.debug('SYNC', `No changes detected for '${codebasePath}'`);
                 }
             }
 
         } catch (error: any) {
-            console.error('[SYNC] Sync failed:', error);
+            logger.error('SYNC', 'Sync failed:', error);
             vscode.window.showErrorMessage(`❌ Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             this.isSyncing = false;
-            console.log(`[SYNC] Sync process finished for workspace: ${codebasePath}`);
+            logger.debug('SYNC', `Sync process finished for workspace: ${codebasePath}`);
         }
     }
 
@@ -100,23 +101,23 @@ export class SyncCommand {
      * Auto-sync functionality - periodically check for changes
      */
     async startAutoSync(intervalMinutes: number = 5): Promise<vscode.Disposable> {
-        console.log(`[AUTO-SYNC] Starting auto-sync with ${intervalMinutes} minute interval`);
+        logger.info('AUTO-SYNC', `Starting auto-sync with ${intervalMinutes} minute interval`);
 
         const intervalMs = intervalMinutes * 60 * 1000;
 
         const interval = setInterval(async () => {
             try {
-                console.log('[AUTO-SYNC] Running periodic sync...');
+                logger.debug('AUTO-SYNC', 'Running periodic sync...');
                 await this.executeSilent();
             } catch (error) {
-                console.warn('[AUTO-SYNC] Silent sync failed:', error);
+                logger.warn('AUTO-SYNC', 'Silent sync failed:', error);
                 // Don't show error to user for auto-sync failures
             }
         }, intervalMs);
 
         // Return a disposable to stop the auto-sync
         return new vscode.Disposable(() => {
-            console.log('[AUTO-SYNC] Stopping auto-sync');
+            logger.info('AUTO-SYNC', 'Stopping auto-sync');
             clearInterval(interval);
         });
     }
@@ -131,7 +132,7 @@ export class SyncCommand {
         }
 
         if (this.isSyncing) {
-            console.log('[AUTO-SYNC] Sync already in progress, skipping...');
+            logger.debug('AUTO-SYNC', 'Sync already in progress, skipping...');
             return;
         }
 
@@ -139,11 +140,11 @@ export class SyncCommand {
         const codebasePath = targetFolder.uri.fsPath;
 
         if (!fs.existsSync(codebasePath)) {
-            console.warn(`[AUTO-SYNC] Workspace folder '${codebasePath}' does not exist`);
+            logger.warn('AUTO-SYNC', `Workspace folder '${codebasePath}' does not exist`);
             return;
         }
 
-        console.log(`[AUTO-SYNC] Starting silent sync for: ${codebasePath}`);
+        logger.info('AUTO-SYNC', `Starting silent sync for: ${codebasePath}`);
 
         this.isSyncing = true;
 
@@ -153,7 +154,7 @@ export class SyncCommand {
             const totalChanges = syncStats.added + syncStats.removed + syncStats.modified;
 
             if (totalChanges > 0) {
-                console.log(`[AUTO-SYNC] Silent sync complete for '${codebasePath}'. Added: ${syncStats.added}, Removed: ${syncStats.removed}, Modified: ${syncStats.modified}`);
+                logger.info('AUTO-SYNC', `Silent sync complete for '${codebasePath}'. Added: ${syncStats.added}, Removed: ${syncStats.removed}, Modified: ${syncStats.modified}`);
 
                 // Show a subtle notification for auto-sync changes
                 vscode.window.showInformationMessage(
@@ -161,11 +162,11 @@ export class SyncCommand {
                     { modal: false }
                 );
             } else {
-                console.log(`[AUTO-SYNC] No changes detected for '${codebasePath}'`);
+                logger.debug('AUTO-SYNC', `No changes detected for '${codebasePath}'`);
             }
 
         } catch (error: any) {
-            console.error('[AUTO-SYNC] Silent sync failed:', error);
+            logger.error('AUTO-SYNC', 'Silent sync failed:', error);
             throw error;
         } finally {
             this.isSyncing = false;

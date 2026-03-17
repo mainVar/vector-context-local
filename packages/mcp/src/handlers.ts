@@ -1,9 +1,31 @@
 import * as fs from "fs";
 import * as path from "path";
-import * as crypto from "crypto";
 import { Context, COLLECTION_LIMIT_MESSAGE, logger } from "@vector-context/core";
 import { SnapshotManager } from "./snapshot.js";
 import { ensureAbsolutePath, truncateContent, trackCodebasePath } from "./utils.js";
+
+export interface IndexCodebaseArgs {
+    path: string;
+    force?: boolean;
+    splitter?: string;
+    customExtensions?: string[];
+    ignorePatterns?: string[];
+}
+
+export interface SearchCodeArgs {
+    path: string;
+    query: string;
+    limit?: number;
+    extensionFilter?: string[];
+}
+
+export interface ClearIndexArgs {
+    path: string;
+}
+
+export interface GetIndexingStatusArgs {
+    path: string;
+}
 
 export class ToolHandlers {
     private context: Context;
@@ -38,12 +60,8 @@ export class ToolHandlers {
 
             logger.debug("SYNC-CLOUD", `📋 Found ${collections.length} collections in Zilliz Cloud`);
 
-            const normalizeForComparison = (p: string) => path.normalize(p).toLowerCase();
-
             const localCodebases = this.snapshotManager.getIndexedCodebases();
             logger.debug("SYNC-CLOUD", `📊 Found ${localCodebases.length} local codebases in snapshot`);
-
-            let hasChanges = false;
 
             for (const localCodebase of localCodebases) {
                 const expectedCollectionName = this.context.getCollectionName(localCodebase);
@@ -56,20 +74,14 @@ export class ToolHandlers {
                 logger.debug("SYNC-CLOUD", `✅ Verified codebase ${localCodebase} (collection ${expectedCollectionName} exists)`);
             }
 
-            if (hasChanges) {
-                this.snapshotManager.saveCodebaseSnapshot();
-                logger.debug("SYNC-CLOUD", "💾 Updated snapshot to match cloud state");
-            } else {
-                logger.debug("SYNC-CLOUD", "✅ Local snapshot matches cloud state");
-            }
-
+            logger.debug("SYNC-CLOUD", "✅ Local snapshot matches cloud state");
             logger.info("SYNC-CLOUD", "✅ Cloud sync completed successfully");
         } catch (error: any) {
             logger.error("SYNC-CLOUD", `❌ Error syncing codebases from cloud: ${error.message || error}`);
         }
     }
 
-    public async handleIndexCodebase(args: any) {
+    public async handleIndexCodebase(args: IndexCodebaseArgs) {
         const { path: codebasePath, force, splitter, customExtensions, ignorePatterns } = args;
         const forceReindex = force || false;
         const splitterType = splitter || 'ast'; // Default to AST
@@ -237,7 +249,7 @@ export class ToolHandlers {
         }
     }
 
-    private async startBackgroundIndexing(codebasePath: string, forceReindex: boolean, splitterType: string) {
+    private async startBackgroundIndexing(codebasePath: string, forceReindex: boolean, splitterType: string): Promise<void> {
         const absolutePath = codebasePath;
         let lastSaveTime = 0;
 
@@ -313,7 +325,7 @@ export class ToolHandlers {
         }
     }
 
-    public async handleSearchCode(args: any) {
+    public async handleSearchCode(args: SearchCodeArgs) {
         const { path: codebasePath, query, limit = 10, extensionFilter } = args;
         const resultLimit = limit || 10;
 
@@ -468,7 +480,7 @@ export class ToolHandlers {
         }
     }
 
-    public async handleClearIndex(args: any) {
+    public async handleClearIndex(args: ClearIndexArgs) {
         const { path: codebasePath } = args;
 
         if (this.snapshotManager.getIndexedCodebases().length === 0 && this.snapshotManager.getIndexingCodebases().length === 0) {
@@ -588,7 +600,7 @@ export class ToolHandlers {
         }
     }
 
-    public async handleGetIndexingStatus(args: any) {
+    public async handleGetIndexingStatus(args: GetIndexingStatusArgs) {
         const { path: codebasePath } = args;
 
         try {

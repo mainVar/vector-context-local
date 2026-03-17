@@ -5,8 +5,9 @@ import { SearchCommand } from './commands/searchCommand';
 import { IndexCommand } from './commands/indexCommand';
 import { SyncCommand } from './commands/syncCommand';
 import { ConfigManager } from './config/configManager';
-import { Context, OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, MilvusRestfulVectorDatabase, AstCodeSplitter, LangChainCodeSplitter, SplitterType } from '@vector-context/core';
+import { Context, MilvusRestfulVectorDatabase, AstCodeSplitter, LangChainCodeSplitter, SplitterType } from '@vector-context/core';
 import { envManager } from '@vector-context/core';
+import { logger } from './utils/logger';
 
 let semanticSearchProvider: SemanticSearchViewProvider;
 let searchCommand: SearchCommand;
@@ -17,7 +18,7 @@ let codeContext: Context;
 let autoSyncDisposable: vscode.Disposable | null = null;
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log('Context extension is now active!');
+    logger.info('EXTENSION', 'Context extension is now active!');
 
     // Initialize config manager
     configManager = new ConfigManager(context);
@@ -46,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 event.affectsConfiguration('semanticCodeSearch.milvus') ||
                 event.affectsConfiguration('semanticCodeSearch.splitter') ||
                 event.affectsConfiguration('semanticCodeSearch.autoSync')) {
-                console.log('Context configuration changed, reloading...');
+                logger.info('EXTENSION', 'Context configuration changed, reloading...');
                 reloadContextConfiguration();
             }
         }),
@@ -83,12 +84,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 async function runInitialSync() {
     try {
-        console.log('[STARTUP] Running initial sync...');
+        logger.info('STARTUP', 'Running initial sync...');
         await syncCommand.executeSilent();
-        console.log('[STARTUP] Initial sync completed');
+        logger.info('STARTUP', 'Initial sync completed');
     } catch (error) {
-        console.error('[STARTUP] Initial sync failed:', error);
-        // Don't show error message to user for startup sync failure
+        logger.error('STARTUP', 'Initial sync failed:', error);
     }
 }
 
@@ -104,17 +104,17 @@ function setupAutoSync() {
     }
 
     if (autoSyncEnabled) {
-        console.log(`Setting up auto-sync with ${autoSyncInterval} minute interval`);
+        logger.info('AUTO-SYNC', `Setting up auto-sync with ${autoSyncInterval} minute interval`);
 
         // Start periodic auto-sync
         syncCommand.startAutoSync(autoSyncInterval).then(disposable => {
             autoSyncDisposable = disposable;
         }).catch(error => {
-            console.error('Failed to start auto-sync:', error);
+            logger.error('AUTO-SYNC', 'Failed to start auto-sync:', error);
             vscode.window.showErrorMessage(`Failed to start auto-sync: ${error instanceof Error ? error.message : 'Unknown error'}`);
         });
     } else {
-        console.log('Auto-sync disabled');
+        logger.info('AUTO-SYNC', 'Auto-sync disabled');
     }
 }
 
@@ -132,23 +132,23 @@ function createContextWithConfig(configManager: ConfigManager): Context {
         // Create embedding instance
         if (embeddingConfig) {
             embedding = ConfigManager.createEmbeddingInstance(embeddingConfig.provider, embeddingConfig.config);
-            console.log(`Embedding initialized with ${embeddingConfig.provider} (model: ${embeddingConfig.config.model})`);
+            logger.info('CONTEXT', `Embedding initialized with ${embeddingConfig.provider} (model: ${embeddingConfig.config.model})`);
             contextConfig.embedding = embedding;
         } else {
-            console.log('No embedding configuration found');
+            logger.info('CONTEXT', 'No embedding configuration found');
         }
 
         // Create vector database instance
         if (milvusConfig) {
             vectorDatabase = new MilvusRestfulVectorDatabase(milvusConfig);
-            console.log(`Vector database initialized with Milvus REST API (address: ${milvusConfig.address})`);
+            logger.info('CONTEXT', `Vector database initialized with Milvus REST API (address: ${milvusConfig.address})`);
             contextConfig.vectorDatabase = vectorDatabase;
         } else {
             vectorDatabase = new MilvusRestfulVectorDatabase({
                 address: envManager.get('MILVUS_ADDRESS') || 'http://localhost:19530',
                 token: envManager.get('MILVUS_TOKEN') || ''
             });
-            console.log('No Milvus configuration found, using default REST API configuration');
+            logger.info('CONTEXT', 'No Milvus configuration found, using default REST API configuration');
             contextConfig.vectorDatabase = vectorDatabase;
         }
 
@@ -167,22 +167,22 @@ function createContextWithConfig(configManager: ConfigManager): Context {
                 );
             }
             contextConfig.codeSplitter = codeSplitter;
-            console.log(`Splitter configured: ${splitterConfig.type} (chunkSize: ${splitterConfig.chunkSize}, overlap: ${splitterConfig.chunkOverlap})`);
+            logger.info('CONTEXT', `Splitter configured: ${splitterConfig.type} (chunkSize: ${splitterConfig.chunkSize}, overlap: ${splitterConfig.chunkOverlap})`);
         } else {
             codeSplitter = new AstCodeSplitter(2500, 300);
             contextConfig.codeSplitter = codeSplitter;
-            console.log('No splitter configuration found, using default AST splitter (chunkSize: 2500, overlap: 300)');
+            logger.info('CONTEXT', 'No splitter configuration found, using default AST splitter (chunkSize: 2500, overlap: 300)');
         }
         return new Context(contextConfig);
     } catch (error) {
-        console.error('Failed to create Context with user config:', error);
+        logger.error('CONTEXT', 'Failed to create Context with user config:', error);
         vscode.window.showErrorMessage(`Failed to initialize Context: ${error instanceof Error ? error.message : 'Unknown error'}`);
         throw error;
     }
 }
 
 function reloadContextConfiguration() {
-    console.log('Reloading Context configuration...');
+    logger.info('CONTEXT', 'Reloading Context configuration...');
 
     const embeddingConfig = configManager.getEmbeddingProviderConfig();
     const milvusConfig = configManager.getMilvusFullConfig();
@@ -193,14 +193,14 @@ function reloadContextConfiguration() {
         if (embeddingConfig) {
             const embedding = ConfigManager.createEmbeddingInstance(embeddingConfig.provider, embeddingConfig.config);
             codeContext.updateEmbedding(embedding);
-            console.log(`Embedding updated with ${embeddingConfig.provider} (model: ${embeddingConfig.config.model})`);
+            logger.info('CONTEXT', `Embedding updated with ${embeddingConfig.provider} (model: ${embeddingConfig.config.model})`);
         }
 
         // Update vector database if configuration exists
         if (milvusConfig) {
             const vectorDatabase = new MilvusRestfulVectorDatabase(milvusConfig);
             codeContext.updateVectorDatabase(vectorDatabase);
-            console.log(`Vector database updated with Milvus REST API (address: ${milvusConfig.address})`);
+            logger.info('CONTEXT', `Vector database updated with Milvus REST API (address: ${milvusConfig.address})`);
         }
 
         // Update splitter if configuration exists
@@ -218,11 +218,11 @@ function reloadContextConfiguration() {
                 );
             }
             codeContext.updateSplitter(newSplitter);
-            console.log(`Splitter updated: ${splitterConfig.type} (chunkSize: ${splitterConfig.chunkSize}, overlap: ${splitterConfig.chunkOverlap})`);
+            logger.info('CONTEXT', `Splitter updated: ${splitterConfig.type} (chunkSize: ${splitterConfig.chunkSize}, overlap: ${splitterConfig.chunkOverlap})`);
         } else {
             const defaultSplitter = new AstCodeSplitter(2500, 300);
             codeContext.updateSplitter(defaultSplitter);
-            console.log('No splitter configuration found, using default AST splitter (chunkSize: 2500, overlap: 300)');
+            logger.info('CONTEXT', 'No splitter configuration found, using default AST splitter (chunkSize: 2500, overlap: 300)');
         }
 
         // Update command instances with new context
@@ -233,20 +233,22 @@ function reloadContextConfiguration() {
         // Restart auto-sync if it was enabled
         setupAutoSync();
 
-        console.log('Context configuration reloaded successfully');
+        logger.info('CONTEXT', 'Context configuration reloaded successfully');
         vscode.window.showInformationMessage('Configuration reloaded successfully!');
     } catch (error) {
-        console.error('Failed to reload Context configuration:', error);
+        logger.error('CONTEXT', 'Failed to reload Context configuration:', error);
         vscode.window.showErrorMessage(`Failed to reload configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
 export function deactivate() {
-    console.log('Context extension is now deactivated');
+    logger.info('EXTENSION', 'Context extension is now deactivated');
 
     // Stop auto-sync if running
     if (autoSyncDisposable) {
         autoSyncDisposable.dispose();
         autoSyncDisposable = null;
     }
+
+    logger.dispose();
 }

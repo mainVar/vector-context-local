@@ -20,6 +20,7 @@ import {
     COLLECTION_LIMIT_MESSAGE
 } from './types';
 import { ClusterManager } from './zilliz-utils';
+import { logger } from '../utils/logger';
 
 export interface MilvusRestfulConfig {
     address?: string;
@@ -40,14 +41,11 @@ async function createCollectionWithLimitCheck(
 ): Promise<void> {
     try {
         await makeRequestFn('/collections/create', 'POST', collectionSchema);
-    } catch (error: any) {
-        // Check if the error message contains the collection limit exceeded pattern
-        const errorMessage = error.message || error.toString() || '';
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         if (/exceeded the limit number of collections/i.test(errorMessage)) {
-            // Throw the exact message string, not an Error object
             throw COLLECTION_LIMIT_MESSAGE;
         }
-        // Re-throw other errors as-is
         throw error;
     }
 }
@@ -75,7 +73,6 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
     }
 
     private async initializeClient(address: string): Promise<void> {
-        // Ensure address has protocol prefix
         let processedAddress = address;
         if (!processedAddress.startsWith('http://') && !processedAddress.startsWith('https://')) {
             processedAddress = `http://${processedAddress}`;
@@ -83,7 +80,7 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
         this.baseUrl = processedAddress.replace(/\/$/, '') + '/v2/vectordb';
 
-        console.log(`🔌 Connecting to Milvus REST API at: ${processedAddress}`);
+        logger.info('MilvusRestfulDB', `Connecting to Milvus REST API at: ${processedAddress}`);
     }
 
     /**
@@ -121,7 +118,6 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
     protected async ensureLoaded(collectionName: string): Promise<void> {
         try {
             const restfulConfig = this.config as MilvusRestfulConfig;
-            // Check if collection is loaded
             const response = await this.makeRequest('/collections/get_load_state', 'POST', {
                 collectionName,
                 dbName: restfulConfig.database
@@ -129,11 +125,11 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
             const loadState = response.data?.loadState;
             if (loadState !== 'LoadStateLoaded') {
-                console.log(`[MilvusRestfulDB] 🔄 Loading collection '${collectionName}' to memory...`);
+                logger.info('MilvusRestfulDB', `Loading collection '${collectionName}' to memory...`);
                 await this.loadCollection(collectionName);
             }
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to ensure collection '${collectionName}' is loaded:`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to ensure collection '${collectionName}' is loaded:`, error);
             throw error;
         }
     }
@@ -179,20 +175,17 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
             }
 
             return result;
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] Milvus REST API request failed:`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', 'Milvus REST API request failed:', error);
             throw error;
         }
     }
 
-    async createCollection(collectionName: string, dimension: number, description?: string): Promise<void> {
+    async createCollection(collectionName: string, dimension: number, _description?: string): Promise<void> {
         await this.ensureInitialized();
 
         try {
             const restfulConfig = this.config as MilvusRestfulConfig;
-            // Build collection schema based on the original milvus-vectordb.ts implementation
-            // Note: REST API doesn't support description parameter in collection creation
-            // Unlike gRPC version, the description parameter is ignored in REST API
             const collectionSchema = {
                 collectionName,
                 dbName: restfulConfig.database,
@@ -263,15 +256,12 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
             // Step 3: Load collection to memory for searching
             await this.loadCollection(collectionName);
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to create collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to create collection '${collectionName}':`, error);
             throw error;
         }
     }
 
-    /**
-     * Create index for vector field using the Index Create API
-     */
     private async createIndex(collectionName: string): Promise<void> {
         try {
             const restfulConfig = this.config as MilvusRestfulConfig;
@@ -289,15 +279,12 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
             };
 
             await this.makeRequest('/indexes/create', 'POST', indexParams);
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to create index for collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to create index for collection '${collectionName}':`, error);
             throw error;
         }
     }
 
-    /**
-     * Load collection to memory for searching
-     */
     private async loadCollection(collectionName: string): Promise<void> {
         try {
             const restfulConfig = this.config as MilvusRestfulConfig;
@@ -305,8 +292,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
                 collectionName,
                 dbName: restfulConfig.database
             });
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to load collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to load collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -320,8 +307,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
                 collectionName,
                 dbName: restfulConfig.database
             });
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to drop collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to drop collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -338,8 +325,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
             const exists = response.data?.has || false;
             return exists;
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to check collection '${collectionName}' existence:`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to check collection '${collectionName}' existence:`, error);
             throw error;
         }
     }
@@ -354,8 +341,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
             });
 
             return response.data || [];
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to list collections:`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', 'Failed to list collections:', error);
             throw error;
         }
     }
@@ -386,8 +373,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
             await this.makeRequest('/entities/insert', 'POST', insertRequest);
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to insert documents into collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to insert documents into collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -428,14 +415,12 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
             const response = await this.makeRequest('/entities/search', 'POST', searchRequest);
 
-            // Transform response to VectorSearchResult format
             const results: VectorSearchResult[] = (response.data || []).map((item: any) => {
-                // Parse metadata from JSON string
                 let metadata = {};
                 try {
                     metadata = JSON.parse(item.metadata || '{}');
-                } catch (error) {
-                    console.warn(`[MilvusRestfulDB] Failed to parse metadata for item ${item.id}:`, error);
+                } catch (error: unknown) {
+                    logger.warn('MilvusRestfulDB', `Failed to parse metadata for item ${item.id}:`, error);
                     metadata = {};
                 }
 
@@ -456,8 +441,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
             return results;
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to search in collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to search in collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -480,8 +465,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
             await this.makeRequest('/entities/delete', 'POST', deleteRequest);
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to delete documents from collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to delete documents from collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -509,13 +494,13 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
 
             return response.data || [];
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to query collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to query collection '${collectionName}':`, error);
             throw error;
         }
     }
 
-    async createHybridCollection(collectionName: string, dimension: number, description?: string): Promise<void> {
+    async createHybridCollection(collectionName: string, dimension: number, _description?: string): Promise<void> {
         try {
             const restfulConfig = this.config as MilvusRestfulConfig;
 
@@ -604,8 +589,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
             // Step 3: Load collection to memory for searching
             await this.loadCollection(collectionName);
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to create hybrid collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to create hybrid collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -644,8 +629,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
             };
             await this.makeRequest('/indexes/create', 'POST', sparseIndexParams);
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to create hybrid indexes for collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to create hybrid indexes for collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -680,8 +665,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
                 throw new Error(`Insert failed: ${response.message || 'Unknown error'}`);
             }
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to insert hybrid documents to collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to insert hybrid documents to collection '${collectionName}':`, error);
             throw error;
         }
     }
@@ -693,10 +678,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
         try {
             const restfulConfig = this.config as MilvusRestfulConfig;
 
-            console.log(`[MilvusRestfulDB] 🔍 Preparing hybrid search for collection: ${collectionName}`);
+            logger.info('MilvusRestfulDB', `Preparing hybrid search for collection: ${collectionName}`);
 
-            // Prepare search requests according to Milvus REST API hybrid search specification
-            // For dense vector search - data must be array of vectors: [[0.1, 0.2, 0.3, ...]]
             const search_param_1: any = {
                 data: Array.isArray(searchRequests[0].data) ? [searchRequests[0].data] : [[searchRequests[0].data]],
                 annsField: searchRequests[0].anns_field, // "vector"
@@ -733,18 +716,18 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
                 }
             };
 
-            console.log(`[MilvusRestfulDB] 🔍 Dense search params:`, JSON.stringify({
+            logger.debug('MilvusRestfulDB', `Dense search params: ${JSON.stringify({
                 annsField: search_param_1.annsField,
                 limit: search_param_1.limit,
                 data_length: Array.isArray(search_param_1.data[0]) ? search_param_1.data[0].length : 'N/A',
                 searchParams: search_param_1.searchParams
-            }, null, 2));
-            console.log(`[MilvusRestfulDB] 🔍 Sparse search params:`, JSON.stringify({
+            }, null, 2)}`);
+            logger.debug('MilvusRestfulDB', `Sparse search params: ${JSON.stringify({
                 annsField: search_param_2.annsField,
                 limit: search_param_2.limit,
                 query_text: typeof search_param_2.data[0] === 'string' ? search_param_2.data[0].substring(0, 50) + '...' : 'N/A',
                 searchParams: search_param_2.searchParams
-            }, null, 2));
+            }, null, 2)}`);
 
             const hybridSearchRequest: any = {
                 collectionName,
@@ -755,7 +738,7 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
                 outputFields: ['id', 'content', 'relativePath', 'startLine', 'endLine', 'fileExtension', 'metadata'],
             };
 
-            console.log(`[MilvusRestfulDB] 🔍 Executing REST API hybrid search...`);
+            logger.debug('MilvusRestfulDB', 'Executing REST API hybrid search...');
             const response = await this.makeRequest('/entities/hybrid_search', 'POST', hybridSearchRequest);
 
             if (response.code !== 0) {
@@ -763,7 +746,7 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
             }
 
             const results = response.data || [];
-            console.log(`[MilvusRestfulDB] ✅ Found ${results.length} results from hybrid search`);
+            logger.info('MilvusRestfulDB', `Found ${results.length} results from hybrid search`);
 
             // Transform response to HybridSearchResult format
             return results.map((result: any) => ({
@@ -781,21 +764,14 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
                 score: result.score || result.distance || 0,
             }));
 
-        } catch (error) {
-            console.error(`[MilvusRestfulDB] ❌ Failed to perform hybrid search on collection '${collectionName}':`, error);
+        } catch (error: unknown) {
+            logger.error('MilvusRestfulDB', `Failed to perform hybrid search on collection '${collectionName}':`, error);
             throw error;
         }
     }
 
-    /**
-     * Check collection limit
-     * Returns true if collection can be created, false if limit exceeded
-     * TODO: Implement proper collection limit checking for REST API
-     */
     async checkCollectionLimit(): Promise<boolean> {
-        // TODO: Implement REST API version of collection limit checking
-        // For now, always return true to maintain compatibility
-        console.warn('[MilvusRestfulDB] ⚠️  checkCollectionLimit not implemented for REST API - returning true');
+        logger.warn('MilvusRestfulDB', 'checkCollectionLimit not implemented for REST API - returning true');
         return true;
     }
 }

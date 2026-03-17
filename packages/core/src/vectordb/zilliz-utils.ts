@@ -1,4 +1,5 @@
 import { envManager } from '../utils/env-manager';
+import { logger } from '../utils/logger';
 
 export interface ZillizConfig {
     baseUrl?: string;
@@ -151,10 +152,10 @@ export class ClusterManager {
 
             const result = await response.json();
             return result as T;
-        } catch (error: any) {
-            // Log the original error for more details, especially for fetch errors
-            console.error('[ZillizUtils] ❌ Original error in makeRequest:', error);
-            throw new Error(`Zilliz API request failed: ${error.message}`);
+        } catch (error: unknown) {
+            logger.error('ZillizUtils', 'Original error in makeRequest:', error);
+            const message = error instanceof Error ? error.message : String(error);
+            throw new Error(`Zilliz API request failed: ${message}`);
         }
     }
 
@@ -252,12 +253,9 @@ export class ClusterManager {
                     throw new Error(`Cluster creation failed with status: ${clusterInfo.status}`);
                 }
 
-                // Wait before next poll
                 await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
-            } catch (error: any) {
-                // If it's a describe cluster error, continue polling
-                // The cluster might not be immediately available for describe
-                if (error.message.includes('Failed to describe cluster')) {
+            } catch (error: unknown) {
+                if (error instanceof Error && error.message.includes('Failed to describe cluster')) {
                     await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
                     continue;
                 }
@@ -295,24 +293,23 @@ export class ClusterManager {
             const clustersResponse = await clusterManager.listClusters(defaultProject.projectId);
 
             if (clustersResponse.clusters.length > 0) {
-                // Use the first available cluster
                 const cluster = clustersResponse.clusters[0];
-                console.log(`🎯 Using existing cluster: ${cluster.clusterName} (${cluster.clusterId})`);
+                logger.info('ZillizUtils', `Using existing cluster: ${cluster.clusterName} (${cluster.clusterId})`);
                 return cluster.connectAddress;
             } else {
-                // No clusters found, create a free cluster
-                console.log('📝 No clusters found, creating a new free cluster...');
+                logger.info('ZillizUtils', 'No clusters found, creating a new free cluster...');
                 const createResponse = await clusterManager.createFreeCluster({
                     clusterName: `auto-cluster-${Date.now()}`,
                     projectId: defaultProject.projectId,
-                    regionId: 'gcp-us-west1' // Default region
+                    regionId: 'gcp-us-west1'
                 });
 
-                console.log(`[ZillizUtils] ✅ Created new cluster: ${createResponse.clusterId}`);
+                logger.info('ZillizUtils', `Created new cluster: ${createResponse.clusterId}`);
                 return createResponse.clusterDetails.connectAddress;
             }
-        } catch (error: any) {
-            throw new Error(`Failed to get address from token: ${error.message}`);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to get address from token: ${message}`);
         }
     }
 }

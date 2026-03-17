@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Context } from '@vector-context/core';
-import * as path from 'path';
+import { logger } from '../utils/logger';
 
 export class IndexCommand {
     private context: Context;
@@ -112,7 +112,7 @@ export class IndexCommand {
             }
 
         } catch (error: any) {
-            console.error('Indexing failed:', error);
+            logger.error('INDEX', 'Indexing failed:', error);
             const errorString = typeof error === 'string' ? error : (error.message || error.toString() || '');
 
             // Check for collection limit message from the core library
@@ -167,7 +167,7 @@ export class IndexCommand {
 
             vscode.window.showInformationMessage('✅ Index cleared successfully');
         } catch (error) {
-            console.error('Failed to clear index:', error);
+            logger.error('INDEX', 'Failed to clear index:', error);
             vscode.window.showErrorMessage(`❌ Failed to clear index: ${error}`);
         }
     }

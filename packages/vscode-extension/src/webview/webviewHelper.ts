@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '../utils/logger';
 
 export class WebviewHelper {
 
@@ -35,7 +36,7 @@ export class WebviewHelper {
 
             return htmlContent;
         } catch (error) {
-            console.error('Failed to read HTML template:', error);
+            logger.error('WEBVIEW', 'Failed to read HTML template:', error);
             return this.getFallbackHtml();
         }
     }

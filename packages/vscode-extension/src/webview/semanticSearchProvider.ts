@@ -5,6 +5,7 @@ import { IndexCommand } from '../commands/indexCommand';
 import { SyncCommand } from '../commands/syncCommand';
 import { ConfigManager, EmbeddingProviderConfig } from '../config/configManager';
 import * as path from 'path';
+import { logger } from '../utils/logger';
 
 export class SemanticSearchViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'semanticSearchView';
@@ -31,10 +32,10 @@ export class SemanticSearchViewProvider implements vscode.WebviewViewProvider {
 
     resolveWebviewView(
         webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
+        _context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken
     ) {
-        console.log('SemanticSearchViewProvider: resolveWebviewView called');
+        logger.debug('WEBVIEW', 'resolveWebviewView called');
 
         webviewView.webview.options = {
             enableScripts: true,
@@ -95,7 +96,7 @@ export class SemanticSearchViewProvider implements vscode.WebviewViewProvider {
 
                             vscode.window.showInformationMessage(`Found ${results.length} results for: "${message.text}"`);
                         } catch (error) {
-                            console.error('Search failed:', error);
+                            logger.error('WEBVIEW', 'Search failed:', error);
                             vscode.window.showErrorMessage(`Search failed: ${error}`);
                             // Send empty results to webview
                             webviewView.webview.postMessage({
@@ -117,7 +118,7 @@ export class SemanticSearchViewProvider implements vscode.WebviewViewProvider {
                             // Update index status after completion
                             await this.checkIndexStatusAndUpdateWebview(webviewView.webview);
                         } catch (error) {
-                            console.error('Indexing error:', error);
+                            logger.error('WEBVIEW', 'Indexing error:', error);
                             // Still notify webview to reset button state
                             webviewView.webview.postMessage({
                                 command: 'indexComplete'
@@ -148,7 +149,7 @@ export class SemanticSearchViewProvider implements vscode.WebviewViewProvider {
                                 editor.selection = new vscode.Selection(range.start, range.end);
                                 editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
                             }
-                        } catch (error) {
+                        } catch {
                             vscode.window.showErrorMessage(`Failed to open file: ${message.relativePath}`);
                         }
                         return;
@@ -215,7 +216,7 @@ export class SemanticSearchViewProvider implements vscode.WebviewViewProvider {
                 hasIndex: hasIndex
             });
         } catch (error) {
-            console.error('Failed to check index status:', error);
+            logger.error('WEBVIEW', 'Failed to check index status:', error);
             webview.postMessage({
                 command: 'updateIndexStatus',
                 hasIndex: false

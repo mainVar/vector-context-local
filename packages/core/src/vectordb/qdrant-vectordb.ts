@@ -1,6 +1,7 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { VectorDatabase, VectorDocument, SearchOptions, VectorSearchResult, HybridSearchResult, HybridSearchRequest, HybridSearchOptions } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../utils/logger';
 
 export class QdrantVectorDB implements VectorDatabase {
     private client: QdrantClient;
@@ -16,7 +17,7 @@ export class QdrantVectorDB implements VectorDatabase {
         });
     }
 
-    async createCollection(collectionName: string, dimension: number, description?: string): Promise<void> {
+    async createCollection(collectionName: string, dimension: number, _description?: string): Promise<void> {
         const exists = await this.hasCollection(collectionName);
         if (!exists) {
             await this.client.createCollection(collectionName, {
@@ -28,7 +29,7 @@ export class QdrantVectorDB implements VectorDatabase {
         }
     }
 
-    async createHybridCollection(collectionName: string, dimension: number, description?: string): Promise<void> {
+    async createHybridCollection(collectionName: string, dimension: number, _description?: string): Promise<void> {
         // Qdrant supports hybrid search via multiple vector properties or just using payload for sparse?
         // Typically sparse vectors are supported in newer Qdrant versions.
         // For simplicity/compatibility, we'll setup dense vector "vector" and enable sparse if possible, 
@@ -67,13 +68,11 @@ export class QdrantVectorDB implements VectorDatabase {
     }
 
     async insert(collectionName: string, documents: VectorDocument[]): Promise<void> {
-        console.log(`[Qdrant] Inserting ${documents.length} documents into ${collectionName}`);
+        logger.info('Qdrant', `Inserting ${documents.length} documents into ${collectionName}`);
 
-        // Validate documents before insertion
         const validDocuments = documents.filter(doc => {
-            // Check if vector exists and is not empty
             if (!doc.vector || !Array.isArray(doc.vector) || doc.vector.length === 0) {
-                console.warn(`[Qdrant] Skipping document with invalid vector:`, {
+                logger.warn('Qdrant', `Skipping document with invalid vector:`, {
                     id: doc.id,
                     path: doc.relativePath,
                     vectorLength: doc.vector?.length
@@ -84,24 +83,22 @@ export class QdrantVectorDB implements VectorDatabase {
         });
 
         if (validDocuments.length === 0) {
-            console.warn(`[Qdrant] No valid documents to insert`);
+            logger.warn('Qdrant', 'No valid documents to insert');
             return;
         }
 
-        console.log(`[Qdrant] Valid documents: ${validDocuments.length}/${documents.length}`);
+        logger.info('Qdrant', `Valid documents: ${validDocuments.length}/${documents.length}`);
 
         try {
             const points = validDocuments.map(doc => {
-                // Ensure ID is a valid UUID - regenerate if not
                 let id = doc.id;
 
-                // UUID regex pattern
                 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
                 if (!id || !uuidPattern.test(id)) {
                     id = uuidv4();
                     if (doc.id) {
-                        console.warn(`[Qdrant] Replaced invalid ID "${doc.id}" with UUID: ${id}`);
+                        logger.warn('Qdrant', `Replaced invalid ID "${doc.id}" with UUID: ${id}`);
                     }
                 }
 
@@ -121,16 +118,16 @@ export class QdrantVectorDB implements VectorDatabase {
 
             const result = await this.client.upsert(collectionName, {
                 points,
-                wait: true // Ensure data is written before returning
+                wait: true
             });
-            console.log(`[Qdrant] Successfully inserted ${points.length} points`);
-            console.log(`[Qdrant] Insert result:`, result);
-        } catch (error: any) {
-            console.error(`[Qdrant] Error inserting into ${collectionName}:`, error.message);
+            logger.info('Qdrant', `Successfully inserted ${points.length} points`);
+            logger.debug('Qdrant', `Insert result: ${JSON.stringify(result)}`);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            logger.error('Qdrant', `Error inserting into ${collectionName}: ${message}`);
 
-            // Log detailed error information
-            if (error.data) {
-                console.error(`[Qdrant] Error details:`, JSON.stringify(error.data, null, 2));
+            if (error instanceof Error && 'data' in error) {
+                logger.error('Qdrant', `Error details: ${JSON.stringify((error as any).data, null, 2)}`);
             }
 
             throw error;
@@ -138,7 +135,7 @@ export class QdrantVectorDB implements VectorDatabase {
     }
 
     async insertHybrid(collectionName: string, documents: VectorDocument[]): Promise<void> {
-        console.log(`[Qdrant] Inserting hybrid ${documents.length} documents into ${collectionName}`);
+        logger.info('Qdrant', `Inserting hybrid ${documents.length} documents into ${collectionName}`);
         return this.insert(collectionName, documents);
     }
 
@@ -168,7 +165,7 @@ export class QdrantVectorDB implements VectorDatabase {
         }));
     }
 
-    async hybridSearch(collectionName: string, searchRequests: HybridSearchRequest[], options?: HybridSearchOptions): Promise<HybridSearchResult[]> {
+    async hybridSearch(collectionName: string, searchRequests: HybridSearchRequest[], _options?: HybridSearchOptions): Promise<HybridSearchResult[]> {
         // Qdrant hasn't a direct "hybridSearch" method like Milvus in the same way, 
         // but supports query batching or prefetching.
         // Given the complexity of mapping exactly to Milvus style hybrid search without more context on inputs,

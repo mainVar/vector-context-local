@@ -12,11 +12,11 @@ import { createMcpConfig, logConfigurationSummary, showHelpMessage, ContextMcpCo
 import { createEmbeddingInstance, logEmbeddingProviderInfo } from "./embedding.js";
 import { SnapshotManager } from "./snapshot.js";
 import { SyncManager } from "./sync.js";
-import { ToolHandlers } from "./handlers.js";
+import { ToolHandlers, IndexCodebaseArgs, SearchCodeArgs, ClearIndexArgs, GetIndexingStatusArgs } from "./handlers.js";
 
-const originalConsoleLog = console.log;
-const originalConsoleWarn = console.warn;
-const originalConsoleError = console.error;
+const _originalConsoleLog = console.log;
+const _originalConsoleWarn = console.warn;
+const _originalConsoleError = console.error;
 
 console.log = (...args: any[]) => {
     process.stderr.write('[LOG] ' + args.join(' ') + '\n');
@@ -235,13 +235,13 @@ This tool is versatile and can be used before completing various tasks to retrie
 
             switch (name) {
                 case "index_codebase":
-                    return await this.toolHandlers.handleIndexCodebase(args);
+                    return await this.toolHandlers.handleIndexCodebase(args as unknown as IndexCodebaseArgs);
                 case "search_code":
-                    return await this.toolHandlers.handleSearchCode(args);
+                    return await this.toolHandlers.handleSearchCode(args as unknown as SearchCodeArgs);
                 case "clear_index":
-                    return await this.toolHandlers.handleClearIndex(args);
+                    return await this.toolHandlers.handleClearIndex(args as unknown as ClearIndexArgs);
                 case "get_indexing_status":
-                    return await this.toolHandlers.handleGetIndexingStatus(args);
+                    return await this.toolHandlers.handleGetIndexingStatus(args as unknown as GetIndexingStatusArgs);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

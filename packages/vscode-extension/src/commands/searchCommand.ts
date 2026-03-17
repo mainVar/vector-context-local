@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Context, SearchQuery, SemanticSearchResult } from '@vector-context/core';
 import * as path from 'path';
+import { logger } from '../utils/logger';
 
 export class SearchCommand {
     private context: Context;
@@ -93,7 +94,7 @@ export class SearchCommand {
                     limit: 20
                 };
 
-                console.log('🔍 Using semantic search...');
+                logger.debug('SEARCH', 'Using semantic search...');
                 progress.report({ increment: 50, message: 'Executing semantic search...' });
 
                 let results = await this.context.semanticSearch(
@@ -127,7 +128,7 @@ export class SearchCommand {
             });
 
         } catch (error) {
-            console.error('Search failed:', error);
+            logger.error('SEARCH', 'Search failed:', error);
             vscode.window.showErrorMessage(`Search failed: ${error}. Please ensure the codebase is indexed.`);
         }
     }
@@ -158,7 +159,7 @@ export class SearchCommand {
             editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
 
         } catch (error) {
-            console.error('Failed to open result:', error);
+            logger.error('SEARCH', 'Failed to open result:', error);
             vscode.window.showErrorMessage(`Failed to open file: ${error}`);
         }
     }
@@ -180,7 +181,7 @@ export class SearchCommand {
             throw new Error('Index not found. Please index the codebase first.');
         }
 
-        console.log('🔍 Using semantic search for webview...');
+        logger.debug('SEARCH', 'Using semantic search for webview...');
 
         // Validate extensions strictly and build filter expression
         let filterExpr: string | undefined = undefined;
@@ -210,7 +211,7 @@ export class SearchCommand {
         try {
             return await this.context.hasIndex(codebasePath);
         } catch (error) {
-            console.error('Error checking index existence:', error);
+            logger.error('SEARCH', 'Error checking index existence:', error);
             return false;
         }
     }
@@ -218,7 +219,7 @@ export class SearchCommand {
     /**
      * Generate quick pick items for VS Code
      */
-    private generateQuickPickItems(results: SemanticSearchResult[], searchTerm: string, workspaceRoot?: string) {
+    private generateQuickPickItems(results: SemanticSearchResult[], _searchTerm: string, _workspaceRoot?: string) {
         return results.slice(0, 20).map((result, index) => {
             let displayPath = result.relativePath;
             // Truncate content for display

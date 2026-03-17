@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { MerkleDAG } from './merkle';
 import * as os from 'os';
+import { logger } from '../utils/logger';
 
 export class FileSynchronizer {
     private fileHashes: Map<string, string>;
@@ -45,8 +46,9 @@ export class FileSynchronizer {
         let entries;
         try {
             entries = await fs.readdir(dir, { withFileTypes: true });
-        } catch (error: any) {
-            console.warn(`[Synchronizer] Cannot read directory ${dir}: ${error.message}`);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            logger.warn('Synchronizer', `Cannot read directory ${dir}: ${message}`);
             return fileHashes;
         }
 
@@ -63,8 +65,9 @@ export class FileSynchronizer {
             let stat;
             try {
                 stat = await fs.stat(fullPath);
-            } catch (error: any) {
-                console.warn(`[Synchronizer] Cannot stat ${fullPath}: ${error.message}`);
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : String(error);
+                logger.warn('Synchronizer', `Cannot stat ${fullPath}: ${message}`);
                 continue;
             }
 
@@ -84,8 +87,9 @@ export class FileSynchronizer {
                     try {
                         const hash = await this.hashFile(fullPath);
                         fileHashes.set(relativePath, hash);
-                    } catch (error: any) {
-                        console.warn(`[Synchronizer] Cannot hash file ${fullPath}: ${error.message}`);
+                    } catch (error: unknown) {
+                        const message = error instanceof Error ? error.message : String(error);
+                        logger.warn('Synchronizer', `Cannot hash file ${fullPath}: ${message}`);
                         continue;
                     }
                 }
@@ -215,35 +219,33 @@ export class FileSynchronizer {
     }
 
     public async initialize() {
-        console.log(`Initializing file synchronizer for ${this.rootDir}`);
+        logger.info('Synchronizer', `Initializing file synchronizer for ${this.rootDir}`);
         await this.loadSnapshot();
         this.merkleDAG = this.buildMerkleDAG(this.fileHashes);
-        console.log(`[Synchronizer] File synchronizer initialized. Loaded ${this.fileHashes.size} file hashes.`);
+        logger.info('Synchronizer', `File synchronizer initialized. Loaded ${this.fileHashes.size} file hashes.`);
     }
 
     public async checkForChanges(): Promise<{ added: string[], removed: string[], modified: string[] }> {
-        console.log('[Synchronizer] Checking for file changes...');
+        logger.info('Synchronizer', 'Checking for file changes...');
 
         const newFileHashes = await this.generateFileHashes(this.rootDir);
         const newMerkleDAG = this.buildMerkleDAG(newFileHashes);
 
-        // Compare the DAGs
         const changes = MerkleDAG.compare(this.merkleDAG, newMerkleDAG);
 
-        // If there are any changes in the DAG, we should also do a file-level comparison
         if (changes.added.length > 0 || changes.removed.length > 0 || changes.modified.length > 0) {
-            console.log('[Synchronizer] Merkle DAG has changed. Comparing file states...');
+            logger.info('Synchronizer', 'Merkle DAG has changed. Comparing file states...');
             const fileChanges = this.compareStates(this.fileHashes, newFileHashes);
 
             this.fileHashes = newFileHashes;
             this.merkleDAG = newMerkleDAG;
             await this.saveSnapshot();
 
-            console.log(`[Synchronizer] Found changes: ${fileChanges.added.length} added, ${fileChanges.removed.length} removed, ${fileChanges.modified.length} modified.`);
+            logger.info('Synchronizer', `Found changes: ${fileChanges.added.length} added, ${fileChanges.removed.length} removed, ${fileChanges.modified.length} modified.`);
             return fileChanges;
         }
 
-        console.log('[Synchronizer] No changes detected based on Merkle DAG comparison.');
+        logger.info('Synchronizer', 'No changes detected based on Merkle DAG comparison.');
         return { added: [], removed: [], modified: [] };
     }
 
@@ -293,7 +295,7 @@ export class FileSynchronizer {
             merkleDAG: this.merkleDAG.serialize()
         });
         await fs.writeFile(this.snapshotPath, data, 'utf-8');
-        console.log(`Saved snapshot to ${this.snapshotPath}`);
+        logger.info('Synchronizer', `Saved snapshot to ${this.snapshotPath}`);
     }
 
     private async loadSnapshot(): Promise<void> {
@@ -301,7 +303,6 @@ export class FileSynchronizer {
             const data = await fs.readFile(this.snapshotPath, 'utf-8');
             const obj = JSON.parse(data);
 
-            // Reconstruct Map without using constructor with iterator
             this.fileHashes = new Map();
             for (const [key, value] of obj.fileHashes) {
                 this.fileHashes.set(key, value);
@@ -310,10 +311,11 @@ export class FileSynchronizer {
             if (obj.merkleDAG) {
                 this.merkleDAG = MerkleDAG.deserialize(obj.merkleDAG);
             }
-            console.log(`Loaded snapshot from ${this.snapshotPath}`);
-        } catch (error: any) {
-            if (error.code === 'ENOENT') {
-                console.log(`Snapshot file not found at ${this.snapshotPath}. Generating new one.`);
+            logger.info('Synchronizer', `Loaded snapshot from ${this.snapshotPath}`);
+        } catch (error: unknown) {
+            const err = error as Error & { code?: string };
+            if (err.code === 'ENOENT') {
+                logger.info('Synchronizer', `Snapshot file not found at ${this.snapshotPath}. Generating new one.`);
                 this.fileHashes = await this.generateFileHashes(this.rootDir);
                 this.merkleDAG = this.buildMerkleDAG(this.fileHashes);
                 await this.saveSnapshot();
@@ -335,13 +337,15 @@ export class FileSynchronizer {
 
         try {
             await fs.unlink(snapshotPath);
-            console.log(`Deleted snapshot file: ${snapshotPath}`);
-        } catch (error: any) {
-            if (error.code === 'ENOENT') {
-                console.log(`Snapshot file not found (already deleted): ${snapshotPath}`);
+            logger.info('Synchronizer', `Deleted snapshot file: ${snapshotPath}`);
+        } catch (error: unknown) {
+            const err = error as Error & { code?: string };
+            if (err.code === 'ENOENT') {
+                logger.info('Synchronizer', `Snapshot file not found (already deleted): ${snapshotPath}`);
             } else {
-                console.error(`[Synchronizer] Failed to delete snapshot file ${snapshotPath}:`, error.message);
-                throw error; // Re-throw non-ENOENT errors
+                const message = error instanceof Error ? error.message : String(error);
+                logger.error('Synchronizer', `Failed to delete snapshot file ${snapshotPath}: ${message}`);
+                throw error;
             }
         }
     }
