@@ -1,135 +1,135 @@
 # @vector-context/cli
 
-CLI інструмент для управління індексацією проектів з інтерактивним TUI інтерфейсом.
+CLI tool for managing project indexing with an interactive TUI interface.
 
-## Встановлення
+## Installation
 
 ```bash
 npm install @vector-context/cli
 ```
 
-Або в monorepo:
+Or in monorepo:
 ```bash
 pnpm install
 ```
 
-## Використання
+## Usage
 
-### Інтерактивний режим (TUI)
+### Interactive Mode (TUI)
 
 ```bash
 vctx
-# або
+# or
 vctx interactive
-# або
+# or
 vctx i
 ```
 
-### CLI команди
+### CLI Commands
 
-#### Додати проект
+#### Add Project
 
 ```bash
 vctx add <path> [options]
 ```
 
-Опції:
-- `--preset <name>` - Пресет (unity, node, python, rust, go, java, web, minimal)
-- `--name <name>` - Кастомна назва проекту
-- `--ignore <pattern>` - Додати ignore pattern (можна використовувати кілька разів)
-- `--extensions <ext>` - Додати розширення файлів
-- `--disabled` - Додати як вимкнений
+Options:
+- `--preset <name>` - Preset (unity, node, python, rust, go, java, web, minimal)
+- `--name <name>` - Custom project name
+- `--ignore <pattern>` - Add ignore pattern (can be used multiple times)
+- `--extensions <ext>` - Add file extensions
+- `--disabled` - Add as disabled
 
-Приклади:
+Examples:
 ```bash
 vctx add ./my-project
 vctx add ./unity-game --preset unity
 vctx add ./api --preset node --ignore "*.test.ts" --ignore "coverage/**"
 ```
 
-#### Видалити проект
+#### Remove Project
 
 ```bash
 vctx remove <path>
 ```
 
-#### Список проектів
+#### List Projects
 
 ```bash
 vctx list [options]
 ```
 
-Опції:
-- `--enabled` - Показати тільки увімкнені
-- `--disabled` - Показати тільки вимкнені
+Options:
+- `--enabled` - Show only enabled
+- `--disabled` - Show only disabled
 
-#### Індексація
+#### Indexing
 
 ```bash
 vctx index [path] [options]
 ```
 
-Опції:
-- `--force` - Примусова переіндексація
-- `--verbose` - Детальний вивід
+Options:
+- `--force` - Force re-indexing
+- `--verbose` - Verbose output
 
-Якщо шлях не вказано, індексуються всі увімкнені проекти.
+If path is not specified, all enabled projects are indexed.
 
-#### Статус
+#### Status
 
 ```bash
 vctx status [path]
 ```
 
-#### Управління ignore patterns
+#### Manage Ignore Patterns
 
 ```bash
 vctx ignore <path> <action> [pattern]
 ```
 
-Дії:
-- `add <pattern>` - Додати pattern
-- `remove <pattern>` - Видалити pattern
-- `list` - Показати всі patterns
+Actions:
+- `add <pattern>` - Add pattern
+- `remove <pattern>` - Remove pattern
+- `list` - Show all patterns
 
-Опції:
-- `--all` - Показати всі ефективні patterns
+Options:
+- `--all` - Show all effective patterns
 
-Приклади:
+Examples:
 ```bash
 vctx ignore ./my-project add "Library/**"
 vctx ignore ./my-project remove "Library/**"
 vctx ignore ./my-project list --all
 ```
 
-#### Управління пресетами
+#### Manage Presets
 
 ```bash
 vctx preset <path> [name]
 vctx presets
 ```
 
-Приклади:
+Examples:
 ```bash
-vctx preset ./my-project        # Показати поточний пресет
-vctx preset ./my-project unity  # Змінити на unity
-vctx presets                    # Список всіх пресетів
+vctx preset ./my-project        # Show current preset
+vctx preset ./my-project unity  # Change to unity
+vctx presets                    # List all presets
 ```
 
-## Пресети
+## Presets
 
-| Пресет | Опис |
-|--------|------|
+| Preset | Description |
+|--------|-------------|
 | `unity` | Unity game development |
 | `node` | Node.js / JavaScript / TypeScript |
-| `python` | Python проекти |
-| `rust` | Rust проекти |
-| `go` | Go проекти |
-| `java` | Java / JVM проекти |
+| `python` | Python projects |
+| `rust` | Rust projects |
+| `go` | Go projects |
+| `java` | Java / JVM projects |
 | `web` | Frontend (React, Vue, Svelte) |
-| `minimal` | Мінімальний набір ignore patterns |
+| `minimal` | Minimal ignore patterns |
 
-### Unity пресет
+### Unity Preset
 
 ```js
 ignorePatterns: [
@@ -142,7 +142,7 @@ ignorePatterns: [
 extensions: ['.cs', '.shader', '.cginc', '.hlsl', '.glsl', '.compute', '.unity', '.prefab', '.asset', '.asmdef']
 ```
 
-### Node.js пресет
+### Node.js Preset
 
 ```js
 ignorePatterns: [
@@ -154,9 +154,9 @@ ignorePatterns: [
 extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.md']
 ```
 
-## Конфігурація
+## Configuration
 
-### Файл конфігурації
+### Configuration File
 
 `~/.context/projects.json`
 
@@ -178,25 +178,25 @@ extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.md']
 }
 ```
 
-### Глобальний ignore файл
+### Global Ignore File
 
 `~/.context/.contextignore`
 
 ```
-# Глобальні ignore patterns
+# Global ignore patterns
 .DS_Store
 Thumbs.db
 *.log
 ```
 
-### Ignore patterns пріоритет
+### Ignore Patterns Priority
 
-1. Пресет patterns
-2. `customIgnore` з конфігу проекту
-3. Глобальний `~/.context/.contextignore`
-4. `.gitignore` в проекті
+1. Preset patterns
+2. `customIgnore` from project config
+3. Global `~/.context/.contextignore`
+4. `.gitignore` in project
 
-## TUI Інтерфейс
+## TUI Interface
 
 ```
 ╔════════════════════════════════════════════════════════════╗
@@ -217,57 +217,57 @@ Thumbs.db
 ╚════════════════════════════════════════════════════════════╝
 ```
 
-### Клавіші TUI
+### TUI Keys
 
-| Клавіша | Дія |
+| Key | Action |
 |---------|-----|
-| `↑` / `↓` | Навігація по списку |
-| `a` | Додати проект |
-| `r` | Видалити вибраний проект |
-| `i` | Індексувати вибраний проект |
-| `e` | Редагувати проект |
-| `p` | Вибрати пресет для проекту |
-| `l` | Оновити список |
-| `q` / `Esc` | Вийти |
+| `↑` / `↓` | Navigate list |
+| `a` | Add project |
+| `r` | Remove selected project |
+| `i` | Index selected project |
+| `e` | Edit project |
+| `p` | Select preset for project |
+| `l` | Refresh list |
+| `q` / `Esc` | Quit |
 
-### Екран пресетів
+### Presets Screen
 
-| Клавіша | Дія |
+| Key | Action |
 |---------|-----|
-| `↑` / `↓` | Навігація по списку пресетів |
-| `Enter` | Застосувати вибраний пресет |
-| `Esc` | Скасувати |
+| `↑` / `↓` | Navigate presets list |
+| `Enter` | Apply selected preset |
+| `Esc` | Cancel |
 
-## Змінні середовища
+## Environment Variables
 
-CLI використовує ті ж змінні що і core пакет:
+CLI uses the same variables as the core package:
 
-| Змінна | Опис | За замовчуванням |
+| Variable | Description | Default |
 |--------|------|------------------|
-| `EMBEDDING_PROVIDER` | Провайдер ембедінгів | `LMStudio` |
-| `EMBEDDING_MODEL` | Модель для ембедінгів | - |
-| `VECTOR_STORE_PROVIDER` | Vector DB провайдер | `Qdrant` |
-| `QDRANT_ADDRESS` | Адреса Qdrant | `http://localhost:6333` |
-| `MILVUS_ADDRESS` | Адреса Milvus | - |
-| `OPENAI_API_KEY` | OpenAI API ключ | - |
-| `VOYAGEAI_API_KEY` | Voyage AI ключ | - |
-| `GEMINI_API_KEY` | Gemini API ключ | - |
+| `EMBEDDING_PROVIDER` | Embedding provider | `LMStudio` |
+| `EMBEDDING_MODEL` | Model for embeddings | - |
+| `VECTOR_STORE_PROVIDER` | Vector DB provider | `Qdrant` |
+| `QDRANT_ADDRESS` | Qdrant address | `http://localhost:6333` |
+| `MILVUS_ADDRESS` | Milvus address | - |
+| `OPENAI_API_KEY` | OpenAI API key | - |
+| `VOYAGEAI_API_KEY` | Voyage AI key | - |
+| `GEMINI_API_KEY` | Gemini API key | - |
 | `LMSTUDIO_BASE_URL` | LM Studio URL | `http://localhost:1234/v1` |
-| `OLLAMA_HOST` | Ollama хост | `http://127.0.0.1:11434` |
+| `OLLAMA_HOST` | Ollama host | `http://127.0.0.1:11434` |
 
-## Розробка
+## Development
 
 ```bash
-# Збірка
+# Build
 pnpm build
 
-# Режим розробки
+# Development mode
 pnpm dev
 
-# Запуск
+# Run
 pnpm start
 ```
 
-## Ліцензія
+## License
 
 MIT
