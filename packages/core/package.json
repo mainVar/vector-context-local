@@ -48,7 +48,7 @@
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/zilliztech/claude-context.git",
+        "url": "https://github.com/mainVar/vector-context-local.git",
         "directory": "packages/core"
     },
     "license": "MIT",

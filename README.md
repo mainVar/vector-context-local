@@ -23,24 +23,41 @@ This version introduces several key improvements for local-first developer exper
 
 ## 🚀 Quick Start (Local Setup)
 
-### Prerequisites
+This guide walks you through setting up Vector Context from scratch using LM Studio for embeddings and Qdrant for vector storage — fully local, no API keys required.
 
-1.  **Run Qdrant with Docker:**
-    ```bash
-    docker run -p 6333:6333 -p 6334:6334 \
-        -v $(pwd)/qdrant_storage:/qdrant/storage:z \
-        qdrant/qdrant
-    ```
-for second conteiner use
-  ```bash
-    docker run -p 6335:6333 -p 6336:6334 `
-        -v ${PWD}/qdrant_storage_v2:/qdrant/storage:z `
-        qdrant/qdrant
-   ```
-2.  **Run LM Studio:**
-    - Download and install [LM Studio](https://lmstudio.ai/).
-    - Load an embedding model (e.g., `nomic-embed-text`).
-    - Start the Local Inference Server (default port 1234).
+### Step 1 — Start local infrastructure
+
+**Qdrant** (vector database):
+```bash
+docker run -p 6333:6333 -p 6334:6334 \
+    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
+    qdrant/qdrant
+```
+
+For a second instance (e.g. a different project or embedding dimension):
+```bash
+docker run -p 6335:6333 -p 6336:6334 `
+    -v ${PWD}/qdrant_storage_v2:/qdrant/storage:z `
+    qdrant/qdrant
+```
+
+**LM Studio** (local embeddings):
+- Download and install [LM Studio](https://lmstudio.ai/).
+- Load an embedding model (e.g., `nomic-embed-text`).
+- Start the Local Inference Server (default port `1234`).
+
+### Step 2 — Clone and build
+
+Requires Node.js >= 20 and pnpm >= 10.
+
+```bash
+git clone --recurse-submodules https://github.com/mainVar/vector-context-local.git
+cd vector-context-local
+pnpm install
+pnpm build
+```
+
+### Step 3 — Configure your MCP client
 
 ### MCP Server Configuration
 
@@ -49,10 +66,10 @@ Add the following to your MCP client configuration (e.g., Cursor, Claude Desktop
 ```json
 {
   "mcpServers": {
-    "claude-context": {
+    "vector-context": {
       "command": "node",
       "args": [
-        "d:/Projects/vector-context-local/packages/mcp/dist/index.js"
+        "/path/to/vector-context-local/packages/mcp/dist/index.js"
       ],
       "env": {
         "EMBEDDING_PROVIDER": "LMStudio",
@@ -67,6 +84,8 @@ Add the following to your MCP client configuration (e.g., Cursor, Claude Desktop
 }
 ```
 
+> Replace `/path/to/vector-context-local` with your actual clone path (e.g., `C:/Projects/vector-context-local` on Windows).
+
 ---
 
 ## 🖥️ CLI Tool (vctx)
@@ -75,12 +94,15 @@ The `@vector-context/cli` package provides a command-line interface for managing
 
 ### Installation
 
-```bash
-# In monorepo
-pnpm install
+After cloning and building the repo (see [Quick Start](#-quick-start-local-setup)), link the CLI globally:
 
-# Build
+```bash
+# Build the CLI package
 pnpm --filter @vector-context/cli build
+
+# Make vctx available globally
+cd packages/vector-context-cli
+npm link
 ```
 
 ### Quick Start
@@ -220,9 +242,9 @@ vctx ignore ./my-game list --all
 ### Setup
 
 ```bash
-# Clone repository
-git clone https://github.com/zilliztech/claude-context.git
-cd claude-context
+# Clone repository (with submodules)
+git clone --recurse-submodules https://github.com/mainVar/vector-context-local.git
+cd vector-context-local
 
 # Install dependencies (pnpm recommended)
 pnpm install
@@ -231,7 +253,7 @@ pnpm install
 pnpm build
 
 # Run CLI
-node packages/cli/dist/index.js --help
+node packages/vector-context-cli/dist/index.js --help
 ```
 
 ### Build Specific Package
