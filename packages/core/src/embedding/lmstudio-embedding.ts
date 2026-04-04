@@ -1,17 +1,23 @@
 
 import { OpenAIEmbedding } from './openai-embedding';
+import { IndexingSpeedConfig, getIndexingSpeedConfig } from './indexing-speed';
+import { envManager } from '../utils/env-manager';
 
 /**
  * LM Studio embedding provider, which is compatible with OpenAI's API.
  * By default it connects to http://localhost:1234/v1
  */
 export class LMStudioEmbedding extends OpenAIEmbedding {
-    constructor(config: { apiKey?: string; model: string; baseURL?: string }) {
+    private speedConfig: IndexingSpeedConfig;
+
+    constructor(config: { apiKey?: string; model: string; baseURL?: string; speedConfig?: IndexingSpeedConfig }) {
         super({
             apiKey: config.apiKey || 'lm-studio',
             model: config.model,
             baseURL: config.baseURL || 'http://localhost:1234/v1'
         });
+
+        this.speedConfig = config.speedConfig ?? getIndexingSpeedConfig(envManager.get('INDEXING_SPEED'));
 
         // Set safe defaults for local inference
         this.maxTokens = 2048;
@@ -39,11 +45,8 @@ export class LMStudioEmbedding extends OpenAIEmbedding {
     // Override embedBatch to throttle requests for local LM Studio
     // LM Studio often crashes with large batches or too many parallel requests
     async embedBatch(texts: string[]): Promise<any[]> {
-        // Optimized settings for local throughput
-        // Processing in small batches avoids OOM but reduces HTTP overhead
-        const BATCH_SIZE = 7;
+        const { lmBatchSize: BATCH_SIZE, lmDelayMs: DELAY_MS } = this.speedConfig;
         const results: any[] = [];
-        const DELAY_MS = 50; // Minimal delay to keep queue moving but allow slight breathing room
 
         // Process sequentially to prevent concurrent GPU overload
         for (let i = 0; i < texts.length; i += BATCH_SIZE) {
@@ -53,8 +56,8 @@ export class LMStudioEmbedding extends OpenAIEmbedding {
                 const chunkResults = await super.embedBatch(chunk);
                 results.push(...chunkResults);
 
-                // Add a minimal delay
-                if (i + BATCH_SIZE < texts.length) {
+                // Add delay between batches if configured
+                if (DELAY_MS > 0 && i + BATCH_SIZE < texts.length) {
                     await new Promise(resolve => setTimeout(resolve, DELAY_MS));
                 }
             } catch (error) {

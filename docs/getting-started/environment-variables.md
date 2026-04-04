@@ -55,11 +55,18 @@ Claude Context supports a global configuration file at `~/.context/.env` to simp
 | `OLLAMA_MODEL`(alternative to `EMBEDDING_MODEL`) | Model name |  |
 
 
+### LM Studio (Local)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LMSTUDIO_BASE_URL` | LM Studio server URL | `http://localhost:1234/v1` |
+| `EMBEDDING_MODEL` | Embedding model to use. When using LM Studio you can pick from loaded models interactively via `vctx` → `[s]` Settings | Provider-specific default |
+| `INDEXING_SPEED` | Indexing load preset: `low` (light load, 200 ms delay), `medium` (default), `max` (fastest, no delay). Selectable via `vctx` → `[s]` Settings | `medium` |
+
 ### Advanced Configuration
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `HYBRID_MODE` | Enable hybrid search (BM25 + dense vector). Set to `false` for dense-only search | `true` |
-| `EMBEDDING_BATCH_SIZE` | Batch size for processing. Larger batch size means less indexing time | `100` |
+| `EMBEDDING_BATCH_SIZE` | Override chunk buffer size regardless of `INDEXING_SPEED` preset | Preset-determined |
 | `SPLITTER_TYPE` | Code splitter type: `ast`, `langchain` | `ast` |
 | `CUSTOM_EXTENSIONS` | Additional file extensions to include (comma-separated, e.g., `.vue,.svelte,.astro`) | None |
 | `CUSTOM_IGNORE_PATTERNS` | Additional ignore patterns (comma-separated, e.g., `temp/**,*.backup,private/**`) | None |

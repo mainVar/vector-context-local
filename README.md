@@ -16,6 +16,8 @@ This version introduces several key improvements for local-first developer exper
 
 - 🏗️ **Local Qdrant Support**: Native integration with Qdrant for efficient local vector storage.
 - 🧪 **LM Studio Integration**: Optimized embedding generation with batch throttling and auto-dimension detection.
+- 🔍 **Dynamic Model Selection**: Fetches available embedding models directly from LM Studio's API — no more hardcoded model names. Pick any loaded model from the TUI Settings screen.
+- ⚡ **Indexing Speed Presets**: Three load profiles (`low` / `medium` / `max`) control batch sizes and request delays so you can balance indexing speed against hardware utilisation.
 - ⚡ **Deterministic ID Generation**: Uses content-based UUID v4 generation to ensure idempotent indexing and prevent duplicates.
 - 🪟 **Windows Stability Fixes**: Normalized path handling (drive letter casing) and path escaping to ensure consistency across Windows environments.
 
@@ -194,7 +196,7 @@ vctx ignore ./my-game list --all
 ╚════════════════════════════════════════════════════════════╝
 ```
 
-**TUI Keys:** `↑/↓` Navigate | `a` Add | `r` Remove | `i` Index | `e` Edit | `q` Quit
+**TUI Keys:** `↑/↓` Navigate | `a` Add | `r` Remove | `i` Index | `e` Edit | `s` Settings | `p` Presets | `l` Refresh | `w` Watch | `q` Quit
 
 ---
 

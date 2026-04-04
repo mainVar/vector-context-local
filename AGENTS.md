@@ -23,12 +23,14 @@ Semantic code search tool powered by vector embeddings. Use `vctx` CLI commands 
 
 ### Environment Variables
 
-| Variable | Default |
-|----------|---------|
-| `EMBEDDING_PROVIDER` | `LMStudio` |
-| `LMSTUDIO_BASE_URL` | `http://localhost:1234/v1` |
-| `VECTOR_STORE_PROVIDER` | `Qdrant` |
-| `QDRANT_ADDRESS` | `http://localhost:6333` |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMBEDDING_PROVIDER` | `LMStudio` | Embedding provider |
+| `EMBEDDING_MODEL` | - | Model name; selectable via `vctx` → `[s]` Settings |
+| `INDEXING_SPEED` | `medium` | Load preset: `low` / `medium` / `max`; selectable via `vctx` → `[s]` Settings |
+| `LMSTUDIO_BASE_URL` | `http://localhost:1234/v1` | LM Studio server URL |
+| `VECTOR_STORE_PROVIDER` | `Qdrant` | Vector DB provider |
+| `QDRANT_ADDRESS` | `http://localhost:6333` | Qdrant address |
 
 ### Workflow
 

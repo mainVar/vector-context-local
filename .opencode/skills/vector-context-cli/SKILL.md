@@ -79,7 +79,8 @@ If not ready, ask the user to ensure:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EMBEDDING_PROVIDER` | `LMStudio` | Provider: LMStudio, Ollama, OpenAI |
-| `EMBEDDING_MODEL` | - | Model name for embeddings |
+| `EMBEDDING_MODEL` | - | Model name for embeddings. For LMStudio, select interactively via `vctx` → `[s]` Settings |
+| `INDEXING_SPEED` | `medium` | Load preset: `low` / `medium` / `max`. Select via `vctx` → `[s]` Settings |
 | `LMSTUDIO_BASE_URL` | `http://localhost:1234/v1` | LM Studio server URL |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama host |
 | `OPENAI_API_KEY` | - | OpenAI API key |
@@ -125,6 +126,8 @@ vctx watch ./my-project
 3. **Check status before searching**: Use `vctx status` to verify indexing is complete
 4. **Use absolute paths**: When in doubt, use absolute paths for reliability
 5. **Force reindex if needed**: Use `--force` if search results seem stale
+6. **Select embedding model**: If `EMBEDDING_MODEL` is not set, open `vctx` → press `[s]` → Model tab to pick from loaded LM Studio models
+7. **Adjust indexing speed**: If indexing is too slow or causes system lag, change the preset via `vctx` → `[s]` → Speed tab
 
 ## Configuration Files
 

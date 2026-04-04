@@ -1,4 +1,4 @@
-import { OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, OllamaEmbedding, LMStudioEmbedding, logger } from "@vector-context/core";
+import { OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, OllamaEmbedding, LMStudioEmbedding, logger, getIndexingSpeedConfig, envManager } from "@vector-context/core";
 import { ContextMcpConfig } from "./config.js";
 
 export function createEmbeddingInstance(config: ContextMcpConfig): OpenAIEmbedding | VoyageAIEmbedding | GeminiEmbedding | OllamaEmbedding | LMStudioEmbedding {
@@ -62,7 +62,8 @@ export function createEmbeddingInstance(config: ContextMcpConfig): OpenAIEmbeddi
             const lmStudioEmbedding = new LMStudioEmbedding({
                 apiKey: 'lm-studio',
                 model: config.embeddingModel,
-                baseURL: lmStudioBaseUrl
+                baseURL: lmStudioBaseUrl,
+                speedConfig: getIndexingSpeedConfig(envManager.get('INDEXING_SPEED')),
             });
             logger.debug("EMBEDDING", "✅ LM Studio embedding instance created successfully");
             return lmStudioEmbedding;

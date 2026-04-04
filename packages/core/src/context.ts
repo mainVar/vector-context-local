@@ -6,7 +6,8 @@ import {
 import {
     Embedding,
     EmbeddingVector,
-    OpenAIEmbedding
+    OpenAIEmbedding,
+    getIndexingSpeedConfig,
 } from './embedding';
 import {
     VectorDatabase,
@@ -656,9 +657,13 @@ export class Context {
         onFileProcessed?: (filePath: string, fileIndex: number, totalFiles: number) => void
     ): Promise<{ processedFiles: number; totalChunks: number; status: 'completed' | 'limit_reached' }> {
         const isHybrid = this.getIsHybrid();
-        const EMBEDDING_BATCH_SIZE = Math.max(1, parseInt(envManager.get('EMBEDDING_BATCH_SIZE') || '100', 10));
+        const speedPreset = getIndexingSpeedConfig(envManager.get('INDEXING_SPEED'));
+        const EMBEDDING_BATCH_SIZE = Math.max(
+            1,
+            parseInt(envManager.get('EMBEDDING_BATCH_SIZE') || String(speedPreset.embeddingBatchSize), 10)
+        );
         const CHUNK_LIMIT = parseInt(envManager.get('MAX_INDEX_CHUNKS') || '1000000', 10);
-        logger.debug("Context", `🔧 Using EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE}, CHUNK_LIMIT: ${CHUNK_LIMIT}`);
+        logger.debug("Context", `🔧 Using EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE}, CHUNK_LIMIT: ${CHUNK_LIMIT}, INDEXING_SPEED: ${envManager.get('INDEXING_SPEED') || 'medium'}`);
 
         let chunkBuffer: Array<{ chunk: CodeChunk; codebasePath: string }> = [];
         let processedFiles = 0;
