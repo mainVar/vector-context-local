@@ -108,6 +108,9 @@ npm link
 ### Quick Start
 
 ```bash
+# Initialize AI integration (creates skill file + AGENTS.md)
+vctx init
+
 # Interactive TUI mode
 vctx
 
@@ -121,6 +124,7 @@ vctx status
 
 | Command | Description |
 |---------|-------------|
+| `vctx init [path]` | Initialize AI integration (create SKILL.md + AGENTS.md) |
 | `vctx` or `vctx interactive` | Launch interactive TUI |
 | `vctx add <path>` | Add project to config |
 | `vctx remove <path>` | Remove project |
@@ -135,6 +139,7 @@ vctx status
 
 | Preset | Description |
 |--------|-------------|
+| `unreal` | Unreal Engine 5 / C++ game development |
 | `unity` | Unity game development |
 | `node` | Node.js / TypeScript |
 | `python` | Python projects |
@@ -147,6 +152,15 @@ vctx status
 ### Examples
 
 ```bash
+# Initialize AI integration in current project
+vctx init
+
+# Initialize only opencode skill file
+vctx init --skill-only
+
+# Force overwrite existing files
+vctx init --force
+
 # Add Unity project with custom ignore
 vctx add ./my-game --preset unity --ignore "Assets/Plugins/**"
 
