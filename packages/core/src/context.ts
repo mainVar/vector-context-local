@@ -95,6 +95,7 @@ export interface ContextConfig {
     ignorePatterns?: string[];
     customExtensions?: string[]; // New: custom extensions from MCP
     customIgnorePatterns?: string[]; // New: custom ignore patterns from MCP
+    filenameOnlyExtensions?: string[]; // Files indexed as a single chunk containing only their relative path
 }
 
 export class Context {
@@ -103,6 +104,7 @@ export class Context {
     private codeSplitter: Splitter;
     private supportedExtensions: string[];
     private ignorePatterns: string[];
+    private filenameOnlyExtensions: Set<string>;
     private synchronizers = new Map<string, FileSynchronizer>();
 
     constructor(config: ContextConfig = {}) {
@@ -125,12 +127,19 @@ export class Context {
         // Load custom extensions from environment variables
         const envCustomExtensions = this.getCustomExtensionsFromEnv();
 
+        // Filename-only extensions: files whose content is not embedded; we index just their relative path
+        const normalizedFilenameOnly = (config.filenameOnlyExtensions || [])
+            .map(ext => (ext.startsWith('.') ? ext : `.${ext}`).toLowerCase());
+        this.filenameOnlyExtensions = new Set(normalizedFilenameOnly);
+
         // Combine default extensions with config extensions and env extensions
         const allSupportedExtensions = [
             ...DEFAULT_SUPPORTED_EXTENSIONS,
             ...(config.supportedExtensions || []),
             ...(config.customExtensions || []),
-            ...envCustomExtensions
+            ...envCustomExtensions,
+            // Filename-only extensions must pass the file scan filter as well
+            ...normalizedFilenameOnly,
         ];
         // Remove duplicates
         this.supportedExtensions = [...new Set(allSupportedExtensions)];
@@ -674,14 +683,30 @@ export class Context {
             const filePath = filePaths[i];
 
             try {
-                const content = await fs.promises.readFile(filePath, 'utf-8');
-                const language = this.getLanguageFromExtension(path.extname(filePath));
-                const chunks = await this.codeSplitter.split(content, language, filePath);
+                const ext = path.extname(filePath).toLowerCase();
+                let chunks: CodeChunk[];
 
-                if (chunks.length > 50) {
-                    logger.warn("Context", `⚠️  File ${filePath} generated ${chunks.length} chunks (${Math.round(content.length / 1024)}KB)`);
-                } else if (content.length > 100000) {
-                    logger.debug("Context", `📄 Large file ${filePath}: ${Math.round(content.length / 1024)}KB -> ${chunks.length} chunks`);
+                if (this.filenameOnlyExtensions.has(ext)) {
+                    const relativePath = path.relative(codebasePath, filePath).replace(/\\/g, '/');
+                    chunks = [{
+                        content: relativePath,
+                        metadata: {
+                            startLine: 1,
+                            endLine: 1,
+                            language: 'filename',
+                            filePath,
+                        },
+                    }];
+                } else {
+                    const content = await fs.promises.readFile(filePath, 'utf-8');
+                    const language = this.getLanguageFromExtension(ext);
+                    chunks = await this.codeSplitter.split(content, language, filePath);
+
+                    if (chunks.length > 50) {
+                        logger.warn("Context", `⚠️  File ${filePath} generated ${chunks.length} chunks (${Math.round(content.length / 1024)}KB)`);
+                    } else if (content.length > 100000) {
+                        logger.debug("Context", `📄 Large file ${filePath}: ${Math.round(content.length / 1024)}KB -> ${chunks.length} chunks`);
+                    }
                 }
 
                 // Add chunks to buffer
@@ -833,6 +858,9 @@ export class Context {
      * Get programming language based on file extension
      */
     private getLanguageFromExtension(ext: string): string {
+        if (this.filenameOnlyExtensions.has(ext.toLowerCase())) {
+            return 'filename';
+        }
         const languageMap: Record<string, string> = {
             '.ts': 'typescript',
             '.tsx': 'typescript',
