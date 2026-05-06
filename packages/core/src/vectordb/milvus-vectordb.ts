@@ -703,6 +703,17 @@ export class MilvusVectorDatabase implements VectorDatabase {
         }
     }
 
+    async dispose(): Promise<void> {
+        if (this.client) {
+            try {
+                await this.client.closeConnection();
+            } catch {
+                // ignore close errors
+            }
+            this.client = null;
+        }
+    }
+
     /**
      * Wrapper method to handle collection creation with limit detection for gRPC client
      * Returns true if collection can be created, false if limit exceeded

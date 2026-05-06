@@ -774,4 +774,8 @@ export class MilvusRestfulVectorDatabase implements VectorDatabase {
         logger.warn('MilvusRestfulDB', 'checkCollectionLimit not implemented for REST API - returning true');
         return true;
     }
+
+    async dispose(): Promise<void> {
+        logger.debug('MilvusRestfulDB', 'Disposing MilvusRestfulVectorDatabase (no persistent connection to close)');
+    }
 }

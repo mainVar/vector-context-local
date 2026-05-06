@@ -131,6 +131,11 @@ export interface VectorDatabase {
      * Returns true if collection can be created, false if limit exceeded
      */
     checkCollectionLimit(): Promise<boolean>;
+
+    /**
+     * Release resources held by this vector database instance
+     */
+    dispose(): Promise<void>;
 }
 
 /**
