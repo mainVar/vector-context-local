@@ -144,6 +144,10 @@ export class GeminiEmbedding extends Embedding {
         return this.client;
     }
 
+    async dispose(): Promise<void> {
+        this.client = null as any;
+    }
+
     /**
      * Get list of supported models
      */

@@ -38,7 +38,6 @@ class ContextMcpServer {
     private toolHandlers: ToolHandlers;
 
     constructor(config: ContextMcpConfig) {
-        // Initialize MCP server
         this.server = new Server(
             {
                 name: config.name,
@@ -69,21 +68,24 @@ class ContextMcpServer {
             });
         }
 
-        // Initialize Claude Context
         this.context = new Context({
             embedding,
             vectorDatabase
         });
 
-        // Initialize managers
         this.snapshotManager = new SnapshotManager();
         this.syncManager = new SyncManager(this.context, this.snapshotManager);
         this.toolHandlers = new ToolHandlers(this.context, this.snapshotManager);
 
-        // Load existing codebase snapshot on startup
         this.snapshotManager.loadCodebaseSnapshot();
 
         this.setupTools();
+    }
+
+    async dispose(): Promise<void> {
+        logger.info("MCP", "Disposing MCP server resources...");
+        await this.context.dispose();
+        logger.info("MCP", "MCP server resources disposed.");
     }
 
     private setupTools() {
@@ -266,34 +268,38 @@ This tool is versatile and can be used before completing various tasks to retrie
     }
 }
 
-// Main execution
+let mcpServer: ContextMcpServer | null = null;
+
+process.on('SIGINT', async () => {
+    logger.error("SHUTDOWN", "Received SIGINT, shutting down gracefully...");
+    if (mcpServer) {
+        await mcpServer.dispose();
+    }
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    logger.error("SHUTDOWN", "Received SIGTERM, shutting down gracefully...");
+    if (mcpServer) {
+        await mcpServer.dispose();
+    }
+    process.exit(0);
+});
+
 async function main() {
-    // Parse command line arguments
     const args = process.argv.slice(2);
 
-    // Show help if requested
     if (args.includes('--help') || args.includes('-h')) {
         showHelpMessage();
         process.exit(0);
     }
 
-    // Create configuration
     const config = createMcpConfig();
     logConfigurationSummary(config);
 
-    const server = new ContextMcpServer(config);
-    await server.start();
+    mcpServer = new ContextMcpServer(config);
+    await mcpServer.start();
 }
-
-process.on('SIGINT', () => {
-    logger.error("SHUTDOWN", "Received SIGINT, shutting down gracefully...");
-    process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-    logger.error("SHUTDOWN", "Received SIGTERM, shutting down gracefully...");
-    process.exit(0);
-});
 
 main().catch((error) => {
     logger.error("FATAL", "Fatal error:", error);

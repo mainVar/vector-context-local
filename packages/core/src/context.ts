@@ -590,6 +590,21 @@ export class Context {
         logger.debug("Context", "🔄 Updated vector database");
     }
 
+    async dispose(): Promise<void> {
+        try {
+            await this.embedding?.dispose();
+        } catch {
+            // ignore
+        }
+        try {
+            await this.vectorDatabase?.dispose();
+        } catch {
+            // ignore
+        }
+        this.synchronizers.clear();
+        logger.debug("Context", "🧹 Context disposed");
+    }
+
     updateSplitter(splitter: Splitter): void {
         this.codeSplitter = splitter;
         logger.debug("Context", "🔄 Updated splitter instance");

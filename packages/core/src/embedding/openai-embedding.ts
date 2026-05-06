@@ -164,6 +164,12 @@ export class OpenAIEmbedding extends Embedding {
         return this.client;
     }
 
+    async dispose(): Promise<void> {
+        // OpenAI SDK does not expose a dispose/close method
+        // Setting to null allows GC to reclaim the instance
+        (this as any).client = null;
+    }
+
     /**
      * Get list of supported models
      */

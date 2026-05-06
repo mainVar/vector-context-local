@@ -195,6 +195,10 @@ export class OllamaEmbedding extends Embedding {
         return this.client;
     }
 
+    async dispose(): Promise<void> {
+        this.client = null as any;
+    }
+
     async detectDimension(testText: string = "test"): Promise<number> {
         console.log(`[OllamaEmbedding] Detecting embedding dimension...`);
 

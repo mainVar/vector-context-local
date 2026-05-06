@@ -73,4 +73,11 @@ export abstract class Embedding {
      * @returns Provider name
      */
     abstract getProvider(): string;
+
+    /**
+     * Release resources held by this embedding instance
+     */
+    dispose(): Promise<void> {
+        return Promise.resolve();
+    }
 } 
