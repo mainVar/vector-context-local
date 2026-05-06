@@ -3,6 +3,36 @@ import { VectorDatabase, VectorDocument, SearchOptions, VectorSearchResult, Hybr
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
 
+function parseMilvusFilterToQdrant(filterExpr: string): Record<string, any> | undefined {
+    if (!filterExpr || filterExpr.trim().length === 0) return undefined;
+
+    const inMatch = filterExpr.match(/^(\w+)\s+in\s+\[([^\]]+)\]$/);
+    if (inMatch) {
+        const field = inMatch[1];
+        const valuesStr = inMatch[2];
+        const values = valuesStr.split(',').map(v => v.trim().replace(/^'(.*)'$/, '$1'));
+        return {
+            should: values.map(val => ({
+                key: field,
+                match: { value: val }
+            }))
+        };
+    }
+
+    const eqMatch = filterExpr.match(/^(\w+)\s*==\s*"([^"]*)"$/);
+    if (eqMatch) {
+        return {
+            should: [{
+                key: eqMatch[1],
+                match: { value: eqMatch[2] }
+            }]
+        };
+    }
+
+    logger.warn('Qdrant', `Could not parse filter expression: "${filterExpr}". Returning undefined.`);
+    return undefined;
+}
+
 export class QdrantVectorDB implements VectorDatabase {
     private client: QdrantClient;
     private address: string;
@@ -30,13 +60,6 @@ export class QdrantVectorDB implements VectorDatabase {
     }
 
     async createHybridCollection(collectionName: string, dimension: number, _description?: string): Promise<void> {
-        // Qdrant supports hybrid search via multiple vector properties or just using payload for sparse?
-        // Typically sparse vectors are supported in newer Qdrant versions.
-        // For simplicity/compatibility, we'll setup dense vector "vector" and enable sparse if possible, 
-        // or just rely on Qdrant's flexibility. 
-        // NOTE: This implementation focuses on the dense vector part primarily unless we define a schema for sparse.
-        // Let's create a standard collection for now, as Qdrant 1.7+ supports sparse vectors named.
-
         const exists = await this.hasCollection(collectionName);
         if (!exists) {
             await this.client.createCollection(collectionName, {
@@ -47,7 +70,7 @@ export class QdrantVectorDB implements VectorDatabase {
                     }
                 },
                 sparse_vectors: {
-                    sparse: {} // Enable sparse vectors named 'sparse'
+                    sparse: {}
                 }
             });
         }
@@ -141,40 +164,50 @@ export class QdrantVectorDB implements VectorDatabase {
 
     async search(collectionName: string, queryVector: number[], options?: SearchOptions): Promise<VectorSearchResult[]> {
         const limit = options?.topK || 10;
-        const filter = options?.filter;
-        // Validating filter -> Qdrant filter
+        const threshold = options?.threshold;
 
-        const results = await this.client.search(collectionName, {
+        const qdrantFilter = parseMilvusFilterToQdrant(options?.filterExpr || '');
+
+        const searchParams: any = {
             vector: queryVector,
             limit: limit,
-            filter: filter as any // Simplified casting, real implementation needs filter translation if formats differ
-        });
+            with_payload: true,
+        };
+        if (qdrantFilter) {
+            searchParams.filter = qdrantFilter;
+        }
 
-        return results.map((hit: any) => ({
-            document: {
-                id: hit.id as string,
-                vector: [], // Qdrant doesn't always return vector unless requested
-                content: hit.payload?.content as string,
-                relativePath: hit.payload?.relativePath as string,
-                startLine: hit.payload?.startLine as number,
-                endLine: hit.payload?.endLine as number,
-                fileExtension: hit.payload?.fileExtension as string,
-                metadata: hit.payload || {}
-            },
-            score: hit.score
-        }));
+        const results = await this.client.search(collectionName, searchParams);
+
+        return results
+            .filter((hit: any) => {
+                if (threshold !== undefined && threshold > 0) {
+                    return hit.score >= threshold;
+                }
+                return true;
+            })
+            .map((hit: any) => ({
+                document: {
+                    id: hit.id as string,
+                    vector: [],
+                    content: hit.payload?.content as string,
+                    relativePath: hit.payload?.relativePath as string,
+                    startLine: hit.payload?.startLine as number,
+                    endLine: hit.payload?.endLine as number,
+                    fileExtension: hit.payload?.fileExtension as string,
+                    metadata: hit.payload || {}
+                },
+                score: hit.score
+            }));
     }
 
     async hybridSearch(collectionName: string, searchRequests: HybridSearchRequest[], _options?: HybridSearchOptions): Promise<HybridSearchResult[]> {
-        // Qdrant hasn't a direct "hybridSearch" method like Milvus in the same way, 
-        // but supports query batching or prefetching.
-        // Given the complexity of mapping exactly to Milvus style hybrid search without more context on inputs,
-        // we will implement a basic fallback or single dense search if only one request.
-
-        // If we simply have a dense vector, run standard search.
         const denseReq = searchRequests.find(r => r.anns_field === 'vector' || r.anns_field === 'default');
         if (denseReq && Array.isArray(denseReq.data)) {
-            const results = await this.search(collectionName, denseReq.data as number[], { topK: denseReq.limit });
+            const results = await this.search(collectionName, denseReq.data as number[], {
+                topK: denseReq.limit,
+                filterExpr: _options?.filterExpr,
+            });
             return results;
         }
 
@@ -182,22 +215,59 @@ export class QdrantVectorDB implements VectorDatabase {
     }
 
     async delete(collectionName: string, ids: string[]): Promise<void> {
+        if (ids.length === 0) return;
         await this.client.delete(collectionName, {
-            points: ids
+            points: ids,
+            wait: true
         });
     }
 
     async query(collectionName: string, filter: string, outputFields: string[], limit?: number): Promise<Record<string, any>[]> {
-        // Simple scroll as query fallback
-        const results = await this.client.scroll(collectionName, {
-            limit: limit || 100,
+        const qdrantFilter = parseMilvusFilterToQdrant(filter);
+
+        const scrollParams: any = {
+            limit: limit || 1000,
             with_payload: true,
-            // Filter implementation would need parsing 'filter' string to Qdrant Filter object
-        });
-        return results.points.map((p: any) => p.payload || {});
+        };
+        if (qdrantFilter) {
+            scrollParams.filter = qdrantFilter;
+        }
+
+        let allPoints: any[] = [];
+        let offset: string | undefined = undefined;
+
+        do {
+            const batchParams: any = { ...scrollParams };
+            if (offset) {
+                batchParams.offset = offset;
+            }
+
+            const results = await this.client.scroll(collectionName, batchParams);
+
+            if (results.points && results.points.length > 0) {
+                allPoints = allPoints.concat(results.points);
+                offset = results.next_page_offset as string | undefined;
+            } else {
+                offset = undefined;
+            }
+
+            if (limit && allPoints.length >= limit) {
+                allPoints = allPoints.slice(0, limit);
+                break;
+            }
+        } while (offset);
+
+        return allPoints.map((p: any) => ({
+            id: p.id,
+            ...(p.payload || {})
+        }));
     }
 
     async checkCollectionLimit(): Promise<boolean> {
-        return true; // No artificial limit for local Qdrant
+        return true;
+    }
+
+    async dispose(): Promise<void> {
+        logger.debug('Qdrant', `Disposing QdrantVectorDB connection to ${this.address}`);
     }
 }
